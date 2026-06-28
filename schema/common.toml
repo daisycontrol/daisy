@@ -1,0 +1,12 @@
+[[message]]
+name = "StateChange"
+fields = [
+    {name = "new_state", type = "u8"},
+    {name = "old_state", type = "u8"},
+]
+
+[[message]]
+name = "HeartBeat"
+fields = [
+    {name = "timestamp", type = "u16"},
+]

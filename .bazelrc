@@ -1,0 +1,10 @@
+build:stm32g4 --platforms=//platforms:stm32g4
+build:stm32g4 --incompatible_enable_cc_toolchain_resolution
+
+build:debug --config=stm32g4
+build:debug --compilation_mode=dbg
+build:debug --copt=-Og
+build:debug --copt=-g3
+build:debug --copt=-ggdb
+
+common --incompatible_autoload_externally=-@rules_python

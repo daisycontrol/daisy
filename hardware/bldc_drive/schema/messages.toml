@@ -1,0 +1,22 @@
+[[message]]
+name = "ControllerGains"
+fields = [
+    {name = "kP_mNm", type = "u16"},
+    {name = "kD_mNm", type = "u16"},
+]
+
+[[message]]
+name = "ControllerSetpoint"
+fields = [
+    {name = "position_target_mRads", type = "i16"},
+    {name = "torque_feedforward_mNm", type = "i16"},
+]
+
+[[message]]
+name = "ControllerFeedback"
+fields = [
+    {name = "position_mRads", type = "i16"},
+    {name = "velocity_mRads", type = "i16"},
+    {name = "torque_mNm", type = "i16"},
+    {name = "drive_temp_C", type = "u8"},
+]

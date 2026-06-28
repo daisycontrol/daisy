@@ -1,0 +1,36 @@
+module(
+    name = "daisy",
+    version = "0.0.1",
+)
+
+bazel_dep(name = "rules_cc", version = "0.2.19")
+bazel_dep(name = "rules_python", version = "2.0.3")
+bazel_dep(name = "rules_shell", version = "0.8.0")
+bazel_dep(name = "platforms", version = "1.1.0")
+
+register_toolchains("//toolchain:arm_none_eabi_toolchain")
+
+arm_toolchain = use_extension("//toolchain:extensions.bzl", "arm_none_eabi_ext")
+use_repo(arm_toolchain, "arm_none_eabi")
+
+register_toolchains("//toolchain:arm_none_eabi_toolchain")
+
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(python_version = "3.12")
+use_repo(python, "python_3_12")
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "pip",
+    python_version = "3.12",
+    requirements_lock = "//python:requirements_lock.txt",
+)
+use_repo(pip, "pip")
+
+bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
+git_override(
+    module_name = "hedron_compile_commands",
+    commit = "7fe1eab26d2b8eeb5e1c6a2f38bddb001e3f9696",
+    remote = "https://github.com/hedronvision/bazel-compile-commands-extractor.git",
+)
