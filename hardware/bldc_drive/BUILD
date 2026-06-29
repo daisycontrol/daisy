@@ -1,6 +1,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@arm_none_eabi//:defs.bzl", "BIN_PREFIX")
+load("//schema/tools:generate_messages.bzl", "generate_messages")
 
 
 # ─── CMSIS Core ───────────────────────────────────────────────────────────────
@@ -111,6 +112,12 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
+generate_messages(
+    name = "bldc_drive_messages",
+    schema = "schema/messages.toml",
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "app",
     srcs = glob(["app/src/*.cpp"]),
@@ -128,6 +135,7 @@ cc_library(
         ":usb_device",
         ":core",
         "//common:ipc",
+        ":bldc_drive_messages_cpp",
         "//schema:common_messages_cpp"
     ],
     visibility = ["//visibility:public"],

@@ -191,7 +191,7 @@ void comms::slcan_usb_rx(uint8_t *Buf, uint32_t buffer_length)
             id_substring[3] = '\0';
             TxHeader_slcan.IdType = FDCAN_STANDARD_ID;
             dlc = Buf[4] - '0';
-            if(Buf[4] > 'A'){
+            if(Buf[4] >= 'A'){
                 dlc = Buf[4] - 'A' + 10;
             }
         }
@@ -201,7 +201,7 @@ void comms::slcan_usb_rx(uint8_t *Buf, uint32_t buffer_length)
             id_substring[11] = '\0';
             TxHeader_slcan.IdType = FDCAN_EXTENDED_ID;
             dlc = Buf[9] - '0';
-            if(Buf[9] > 'A'){
+            if(Buf[9] >= 'A'){
                 dlc = Buf[9] - 'A' + 10;
             }
         }

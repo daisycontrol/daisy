@@ -29,6 +29,21 @@ inline void put_i16(std::vector<std::uint8_t>&buf, int16_t v){
     buf.push_back(static_cast<uint8_t>((v >> 8) & 0xFF));
 }
 
+inline void put_u32(std::vector<std::uint8_t>&buf, uint32_t v){
+    buf.push_back(static_cast<uint8_t>(v & 0xFF));
+    buf.push_back(static_cast<uint8_t>((v >> 8) & 0xFF));
+    buf.push_back(static_cast<uint8_t>((v >> 16) & 0xFF));
+    buf.push_back(static_cast<uint8_t>((v >> 24) & 0xFF));
+}
+
+inline void put_i32(std::vector<std::uint8_t>&buf, int32_t v){
+    buf.push_back(static_cast<uint8_t>(v & 0xFF));
+    buf.push_back(static_cast<uint8_t>((v >> 8) & 0xFF));
+    buf.push_back(static_cast<uint8_t>((v >> 16) & 0xFF));
+    buf.push_back(static_cast<uint8_t>((v >> 24) & 0xFF));
+}
+
+
 struct Reader {
     const uint8_t* data;
     size_t len;
@@ -44,6 +59,16 @@ struct Reader {
     int16_t i16() { 
         int16_t v = static_cast<int16_t>(data[pos] | data[pos + 1] << 8);
         pos += 2;
+        return v;
+    }
+    uint32_t u32() { 
+        uint16_t v = static_cast<uint32_t>(data[pos] | data[pos + 1] << 8 | data[pos + 1] << 16 | data[pos + 1] << 24);
+        pos += 4;
+        return v;
+    }
+    int32_t i32() { 
+        int16_t v = static_cast<int32_t>(data[pos] | data[pos + 1] << 8 | data[pos + 1] << 16 | data[pos + 1] << 24);
+        pos += 4;
         return v;
     }
 };

@@ -20,6 +20,7 @@ py_binary(
     srcs = ["message_test.py"],
     deps = [
         "//schema:common_messages_py",
+        "//hardware/bldc_drive:bldc_drive_messages_py",
         ":daisycontrol_lib",
         "@pip//python_can",
         "@pip//numpy",

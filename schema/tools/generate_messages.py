@@ -7,6 +7,8 @@ c_types = {
     'i8':  'int8_t',
     'u16': 'uint16_t',
     'i16': 'int16_t',
+    'u32': 'uint32_t',
+    'i32': 'int32_t',
 }
 
 py_types = {
@@ -14,6 +16,8 @@ py_types = {
     'i8':  'int',
     'u16': 'int',
     'i16': 'int',
+    'u32': 'int',
+    'i32': 'int',
 }
 
 py_struct_types = {
@@ -21,7 +25,21 @@ py_struct_types = {
     'i8':  'b',
     'u16': 'H',
     'i16': 'h',
+    'u32': 'I',
+    'i32': 'i',
 }
+
+type_lengths = {
+    'u8': 1,
+    'i8':  1,
+    'u16': 2,
+    'i16': 2,
+    'u32': 4,
+    'i32': 4,
+}
+
+max_can_message_length = 64
+can_message_lengths = [1,2,3,4,5,6,7,8,12,16,20,24,32,48,64]
 
 def write_message_c(message, gen: CodeGen):
     name = message["name"]
@@ -75,6 +93,15 @@ def write_message_py(message, gen : CodeGen):
                 [ gen.add_line(f'obj.{f["name"]},') for f in message["fields"] ]
                 gen.add_line(")")
 
+def validate_message(message):
+    length = 0
+    for field in message['fields']:
+        length += type_lengths[field['type']]
+
+    if(length > max_can_message_length):
+        raise Exception(f"Message length {length} for message {message['name']} is longer than the maximum allowed: {max_can_message_length}")
+    if(length not in can_message_lengths):
+        raise Exception(f"Message length {length} for message {message['name']} is not a standard canfd length and will be padded")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -95,6 +122,7 @@ if __name__ == "__main__":
         gen_py.add_line("")
 
         for message in message_structure['message']:
+            validate_message(message)
             write_message_py(message, gen_py)
 
         with open(args.out, "w") as f:
@@ -109,6 +137,7 @@ if __name__ == "__main__":
         gen_c.add_line("")
 
         for message in message_structure['message']:
+            validate_message(message)
             write_message_c(message, gen_c)
 
         with open(args.out, "w") as f:
