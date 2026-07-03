@@ -1,4 +1,7 @@
 #include "comms.h"
+#include "common/ipc/ipc.h"
+#include "stm32g4xx_hal_fdcan.h"
+#include <cstddef>
 
 using namespace comms;
 
@@ -9,40 +12,63 @@ uint8_t TxData[64];
 uint8_t RxData[64];
 
 FDCAN_TxHeaderTypeDef TxHeader_slcan;
+
+ipc::IPCRouter* ipc_router;
+
 uint8_t TxData_slcan[64];
 
 bool slcan_open = false;
 
 
-const uint16_t dlc_to_data_length[] = {
+const uint8_t dlc_to_data_length[] = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, // 2.0
     12, 16, 20, 24, 32, 48, 64 // FD
 };
 
-const uint32_t dlc_to_dlc_def[] = {
-    FDCAN_DLC_BYTES_0,
-    FDCAN_DLC_BYTES_1,
-    FDCAN_DLC_BYTES_2,
-    FDCAN_DLC_BYTES_3,
-    FDCAN_DLC_BYTES_4,
-    FDCAN_DLC_BYTES_5,
-    FDCAN_DLC_BYTES_6,
-    FDCAN_DLC_BYTES_7,
-    FDCAN_DLC_BYTES_8,
-    FDCAN_DLC_BYTES_12,
-    FDCAN_DLC_BYTES_16,
-    FDCAN_DLC_BYTES_20,
-    FDCAN_DLC_BYTES_24,
-    FDCAN_DLC_BYTES_32,
-    FDCAN_DLC_BYTES_48,
-    FDCAN_DLC_BYTES_64
-};
+uint8_t data_length_to_dlc(size_t len){
+    switch(len){
+        case(0):
+            return FDCAN_DLC_BYTES_0;
+        case(1):
+            return FDCAN_DLC_BYTES_1;
+        case(2):
+            return FDCAN_DLC_BYTES_2;
+        case(3):
+            return FDCAN_DLC_BYTES_3;
+        case(4):
+            return FDCAN_DLC_BYTES_4;
+        case(5):
+            return FDCAN_DLC_BYTES_5;
+        case(6):
+            return FDCAN_DLC_BYTES_6;
+        case(7):
+            return FDCAN_DLC_BYTES_7;
+        case(8):
+            return FDCAN_DLC_BYTES_8;
+        case(12):
+            return FDCAN_DLC_BYTES_12;
+        case(16):
+            return FDCAN_DLC_BYTES_16;
+        case(20):
+            return FDCAN_DLC_BYTES_20;
+        case(24):
+            return FDCAN_DLC_BYTES_24;
+        case(32):
+            return FDCAN_DLC_BYTES_32;
+        case(48):
+            return FDCAN_DLC_BYTES_48;
+        case(64):
+            return FDCAN_DLC_BYTES_64;
+        default:
+            return FDCAN_DLC_BYTES_0;
+    }
+}
 
 // CAN handle to use
 FDCAN_HandleTypeDef* hfdcan;
 
 // Device ID, also used as CAN ID
-uint16_t device_id = 0;
+uint16_t device_id = 10;
 
 void comms::set_device_id(uint16_t _device_id){
     device_id = _device_id;
@@ -52,7 +78,21 @@ uint16_t comms::get_device_id(){
     return device_id;
 }
 
-int comms::can_transmit(FDCAN_TxHeaderTypeDef *TxHeader, uint8_t *TxData)
+int comms::transmit(const uint8_t* data, size_t len)
+{
+    FDCAN_TxHeaderTypeDef tx_header;
+
+    tx_header.Identifier = device_id;
+    tx_header.IdType = FDCAN_STANDARD_ID;
+    tx_header.TxFrameType = FDCAN_DATA_FRAME;
+    tx_header.DataLength = data_length_to_dlc(len);
+    tx_header.BitRateSwitch = FDCAN_BRS_OFF;
+    tx_header.FDFormat = FDCAN_FD_CAN;
+
+    return can_transmit(&tx_header, data);
+}
+
+int comms::can_transmit(FDCAN_TxHeaderTypeDef* TxHeader, const uint8_t* TxData)
 {
     if(slcan_open){
         send_slcan_string(convert_tx_header(TxHeader), TxData);
@@ -68,14 +108,18 @@ int comms::can_transmit(FDCAN_TxHeaderTypeDef *TxHeader, uint8_t *TxData)
     return 1;
 }
 
-void comms::can_receive(FDCAN_RxHeaderTypeDef *TxHeader, uint8_t *TxData)
+void comms::can_receive(FDCAN_RxHeaderTypeDef *RxHeader, uint8_t *RxData)
 {
-    return;
+    // Route message to ipc callback
+    if(RxHeader->Identifier == device_id){
+        ipc_router->on_can_frame(RxData, static_cast<size_t>(dlc_to_data_length[RxHeader->DataLength]));
+    }
 }
 
-void comms::initialize(FDCAN_HandleTypeDef* _hfdcan)
+void comms::initialize(FDCAN_HandleTypeDef* _hfdcan, ipc::IPCRouter* _router)
 {
     hfdcan = _hfdcan;
+    ipc_router = _router;
 
     // Set up CAN header
     TxHeader.Identifier = device_id;
@@ -121,18 +165,6 @@ void comms::initialize(FDCAN_HandleTypeDef* _hfdcan)
         Error_Handler();
     }
 }
-
-// Convert from STM32 define to CAN FD dlc
-// Use dlc_to_data_length to convert to number of bytes
-uint32_t dlc_def_to_dlc(uint32_t dlc_def){
-    for(int dlc = 0; dlc <= 15; dlc++){
-        if(dlc_to_dlc_def[dlc] == dlc_def){
-            return dlc;
-        }
-    }
-    return 0;
-}
-
 
 void comms::slcan_usb_rx(uint8_t *Buf, uint32_t buffer_length)
 {
@@ -206,7 +238,7 @@ void comms::slcan_usb_rx(uint8_t *Buf, uint32_t buffer_length)
             }
         }
 
-        TxHeader_slcan.DataLength = dlc_to_dlc_def[dlc];
+        TxHeader_slcan.DataLength = dlc;
         TxHeader_slcan.Identifier = strtol(id_substring, NULL, 16);
 
         for (int i = 0; i < dlc_to_data_length[dlc]; i++)
@@ -218,7 +250,7 @@ void comms::slcan_usb_rx(uint8_t *Buf, uint32_t buffer_length)
         }
 
         // Fake loopback
-        send_slcan_string(convert_tx_header(&TxHeader_slcan), TxData_slcan);
+        // send_slcan_string(convert_tx_header(&TxHeader_slcan), TxData_slcan);
 
         slcan_open = false;
         can_transmit(&TxHeader_slcan, TxData_slcan);
@@ -229,11 +261,11 @@ void comms::slcan_usb_rx(uint8_t *Buf, uint32_t buffer_length)
     }
 }
 
-void comms::send_slcan_string(FDCAN_RxHeaderTypeDef RxHeader, uint8_t *RxData)
+void comms::send_slcan_string(FDCAN_RxHeaderTypeDef RxHeader, const uint8_t *RxData)
 {
     char tx_string[134]; // 5 + 2 * 62 + 1
 
-    uint32_t number_of_data_bytes = dlc_to_data_length[dlc_def_to_dlc(RxHeader.DataLength)];
+    uint32_t number_of_data_bytes = dlc_to_data_length[RxHeader.DataLength];
 
     // Set message type and ID
     // sprintf is valid here as we will override the termination character later

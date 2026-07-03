@@ -22,3 +22,9 @@ fields = [
     {name = "value_6", type = "i16"},
     {name = "value_7", type = "i32"},
 ]
+
+[[message]]
+name = "EmptyMessage"
+fields = [
+    {name = "empty", type = "i8"}
+]

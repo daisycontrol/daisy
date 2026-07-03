@@ -181,3 +181,7 @@ void drive::state_machine(){
             break;
     }
 }
+
+DriveState drive::get_current_state(){
+    return drive_state;
+}

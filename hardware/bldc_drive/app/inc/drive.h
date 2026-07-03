@@ -81,5 +81,6 @@ void commutation_interrupt();
 void state_machine();
 void set_gains(float, float);
 DriveState request_new_state(DriveState);
+DriveState get_current_state();
 
 } // drive

@@ -119,6 +119,42 @@ generate_messages(
 )
 
 cc_library(
+    name = "scheduler",
+    srcs = ["//common/scheduler:scheduler_srcs"],
+    hdrs = ["//common/scheduler:scheduler_hdrs"],
+    copts = ["-DSTM32G431xx", "-DUSE_HAL_DRIVER"],
+    strip_include_prefix = "",
+    deps = [
+        ":core",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "memory",
+    srcs = ["//common/memory:memory_srcs"],
+    hdrs = ["//common/memory:memory_hdrs"],
+    copts = ["-DSTM32G431xx", "-DUSE_HAL_DRIVER"],
+    strip_include_prefix = "",
+    deps = [
+        ":core",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "tle5012",
+    srcs = ["//common/tle5012:tle5012_srcs"],
+    hdrs = ["//common/tle5012:tle5012_hdrs"],
+    copts = ["-DSTM32G431xx", "-DUSE_HAL_DRIVER"],
+    strip_include_prefix = "",
+    deps = [
+        ":core",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "app",
     srcs = glob(["app/src/*.cpp"]),
     hdrs = glob(["app/inc/*.h"]),
@@ -135,6 +171,9 @@ cc_library(
         ":usb_device",
         ":core",
         "//common:ipc",
+        ":scheduler",
+        ":memory",
+        ":tle5012",
         ":bldc_drive_messages_cpp",
         "//schema:common_messages_cpp"
     ],
