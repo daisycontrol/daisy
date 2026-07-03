@@ -1,4 +1,5 @@
 #include "memory.h"
+#include <cstdint>
 
 
 #define SETTINGS_BANK        FLASH_BANK_1
@@ -17,6 +18,10 @@ void memory::initialize(size_t _size, uint8_t _settings_page) {
     settings_page_addr = (0x08000000UL + (settings_page * FLASH_PAGE_SIZE));
     settings_record_size_aligned = ((_size + 7u) & ~7u);
     settings_length = _size;
+}
+
+void* memory::get_addr(){
+  return (void*) settings_page_addr;
 }
 
 HAL_StatusTypeDef memory::erase_settings_page(void){

@@ -1,8 +1,9 @@
 [[message]]
-name = "ControllerGains"
+name = "ControllerSettings"
 fields = [
     {name = "kP_mNm", type = "u16"},
     {name = "kD_mNm", type = "u16"},
+    {name = "max_current_mA", type = "u16"}
 ]
 
 [[message]]
@@ -32,10 +33,13 @@ fields = [
 [[message]]
 name = "DriveMemory"
 fields = [
-    {name = "magic", type = "u32"},
-    {name = "drive_pole_pairs", type = "u8"},
-    {name = "drive_encoder_offset", type = "u16"},
+    {name = "magic", type = "u16"},
     {name = "can_id", type = "u16"},
-    {name = "padding_1", type = "u8"},
-    {name = "padding_2", type = "u16"}
+    {name = "drive_pole_pairs", type = "i8"}, # Negative pole pairs means a reversed motor
+    {name = "reversed", type = "i8"},
+    {name = "drive_encoder_offset", type = "u16"},
+    {name = "drive_resistance_mOhm", type = "u16"},
+    {name = "drive_inductance_uH", type = "u16"},
+    {name = "drive_torque_constant_mNm_A", type = "u16"},
+    {name = "padding", type = "u8"}
 ]

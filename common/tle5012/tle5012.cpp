@@ -24,15 +24,15 @@ void tle5012b::TLE5012B::read_register(uint8_t address, uint8_t* _buffer, size_t
 
     HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_RESET);
     HAL_SPI_Transmit(hspi, buffer, 2, 100);
-    HAL_SPI_Receive(hspi, _buffer, len * 2 + 2, 100); // Ignores safety word for now
+    HAL_SPI_Receive(hspi, _buffer, len * 2, 100); // Ignores safety word for now
     HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET);
 }
 
 void tle5012b::TLE5012B::update_state(){
     uint8_t data[8];
-    read_register(0x02, data, 3);
+    read_register(0x02, data, 1);
 
     angle_raw = (data[0] << 8 | data[1]) & 0x7FFF;
-    speed_raw = (((data[2] << 8 | data[3]) & 0x7FFF) ^ 1<<14) - (1<<14);
-    revolutions = (((data[4] << 8 | data[5]) & 0x01FF) ^ 1<<8) - (1<<8);
+    // speed_raw = (((data[2] << 8 | data[3]) & 0x7FFF) ^ 1<<14) - (1<<14);
+    // revolutions = (((data[4] << 8 | data[5]) & 0x01FF) ^ 1<<8) - (1<<8);
 }

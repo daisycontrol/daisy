@@ -98,9 +98,9 @@ def validate_message(message):
     for field in message['fields']:
         length += type_lengths[field['type']]
 
-    if(length > max_can_message_length):
+    if((length + 1) > max_can_message_length):
         raise Exception(f"Message length {length} for message {message['name']} is longer than the maximum allowed: {max_can_message_length}")
-    if(length not in can_message_lengths):
+    if((length + 1) not in can_message_lengths):
         raise Exception(f"Message length {length} for message {message['name']} is not a standard canfd length and will be padded")
 
 if __name__ == "__main__":

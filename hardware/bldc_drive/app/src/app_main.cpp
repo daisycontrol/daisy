@@ -1,4 +1,5 @@
 #include "app_main.h"
+
 // c lib includes
 #include "main.h"
 #include "stm32g4xx_hal_def.h"
@@ -6,6 +7,7 @@
 #include "stm32g4xx_hal_flash_ex.h"
 #include "stm32g4xx_hal_gpio.h"
 #include "stm32g4xx_hal_spi.h"
+#include "math.h"
 #include "string.h"
 #include <stdio.h>
 // ST HAL includes
@@ -20,36 +22,25 @@
 #include "drive.h"
 #include "led.h"
 #include "trig.h"
-#include "foc.h"
 #include "uid_hash.h"
 #include "comms.h"
+#include "drive_memory.h"
 // Common lib includes
 #include "common/tle5012/tle5012.h"
 #include "common/scheduler/scheduler.h"
 #include "common/memory/memory.h"
 #include "schema/common_messages.h"
-#include "hardware/bldc_drive/bldc_drive_messages.h"
 
-
-// struct ControllerTarget target;
-int count = 0;
-int angle = 0;
-
-#define CDC_RX_BUFFER_SIZE 128
-uint8_t cdcRxBuffer[CDC_RX_BUFFER_SIZE];
-uint32_t cdcRxBufferIndex = 0;
 
 void tx_fn(const uint8_t* data, size_t len){
   comms::transmit(data, len);
 }
-
 ipc::IPCRouter router(tx_fn);
+
 tle5012b::TLE5012B encoder(&hspi1, ENC_CS_GPIO_Port, ENC_CS_Pin);
+DriveMemory drive_memory;
 
-
-#define STATE_CHANGE_ID 1
-#define ENCODER_STATE_ID 5
-
+// Request state change
 void state_change(StateChange requested_state){
   StateChange return_state;
 
@@ -59,16 +50,19 @@ void state_change(StateChange requested_state){
   router.send(STATE_CHANGE_ID, StateChange::encode(return_state)); // TODO: Do this automatically via the return
 }
 
+// Read out volatile memory
+void read_memory(EmptyMessage msg){
+  router.send(READ_MEMORY_ID, DriveMemory::encode(drive_memory));
+}
 
-DriveMemory drive_memory;
+// Write new memory
+void write_memory(DriveMemory _new_memory){
+  drive_memory = _new_memory;
+  memory::write_memory(&drive_memory);
+  router.send(READ_MEMORY_ID, DriveMemory::encode(drive_memory));
+}
 
-// #define SETTINGS_BANK FLASH_BANK_1
-// #define SETTINGS_PAGE (63)
-// #define SETTINGS_PAGE_ADDR (0x08000000UL + (SETTINGS_PAGE * FLASH_PAGE_SIZE))
-// #define SETTINGS_PAGE_SIZE FLASH_PAGE_SIZE
-// #define SETTINGS_RECORD_SIZE_ALIGNED ((sizeof(DriveMemory) + 7u) & ~7u)
-
-
+// Read raw encoder values
 void read_encoder(EmptyMessage msg){
   EncoderState encoder_state;
 
@@ -81,37 +75,34 @@ void read_encoder(EmptyMessage msg){
 
 void app_main(void){
   CDC_RegisterRxCallback(usb_callback);
-
   HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
 
-  ControllerSetpoint setpoint;
-  setpoint.position_target_mRads = 10;
-
+  // Register IPC callbacks 
   router.register_hook<StateChange>(STATE_CHANGE_ID, "state_change", state_change);
-  // router.register_hook<StateChange>(1, "state_change", test_fn);
   router.register_hook<EmptyMessage>(ENCODER_STATE_ID, "read_encoder", read_encoder);
-
-  // Attempt to load memory
-  // memory = *(DriveMemory *)(SETTINGS_PAGE_ADDR);
-
-  drive_memory.magic = 0x12345678;
+  router.register_hook<EmptyMessage>(READ_MEMORY_ID, "read_memory", read_memory);
+  router.register_hook<DriveMemory>(WRITE_MEMORY_ID, "write_memroy", write_memory);
   
-
-
-
-  // Some modules need to be re-inited based on drive voltage state
+  // Initialize modules
   memory::initialize(sizeof(DriveMemory), 63);
-  memory::write_memory(&drive_memory);
-
-
+  drive_memory = *(DriveMemory*)(memory::get_addr()); // Load memory
   scheduler::initialize();
   uid_hash::initialize();
   trig::initialize();
-  drive::initialize();
-  analog::initialize();
   led::initialize();
   comms::initialize(&hfdcan1, &router);
+  analog::initialize();
+  drive::assign_encoder(&encoder);
 
+  // If voltage is above, init drive, otherwise, boot in error
+  if(analog::read_bus_voltage_v() > drive::min_voltage){
+    drive::request_new_state(drive::DRIVE_DISABLE);
+  } else {
+    drive::request_new_state(drive::DRIVE_ERROR);
+  }
+
+
+  // Set up tasks
   scheduler::PeriodicTask blink_task(&htim2);
   blink_task.period_us = scheduler::period_from_hertz(60);
 
@@ -121,37 +112,66 @@ void app_main(void){
   scheduler::PeriodicTask analog_update_task(&htim2);
   analog_update_task.period_us = scheduler::period_from_hertz(100);
 
+
   char print_buffer[100];
+  float led_timer_s = 0.0f;
+
+  drive::initialize();
 
   while(true) {
     if(drive_state_machine.tick()){
-      struct drive::PhaseVoltages motor_voltage;
-      foc::make_voltage_at_electrical_angle(500, 0, angle, &motor_voltage);
-      drive::set_target_phase_voltages(&motor_voltage);
-
-      angle += 8;
+      drive::state_machine();
     }
     
     // Compute all non-current analog values
     if(analog_update_task.tick()){
-      encoder.update_state();
       analog::read_bus_voltage_v();
     }
 
 
     if(blink_task.tick()){
-      // Toggle timer
-      led::set_hsv(count / 10.0f, 1.0f, 1.0f);
-      count += 1;
+
+      led_timer_s += blink_task.period_us / 1000000.0f;
+
+      float v_scale = 0.4f;
+
+      switch(drive::get_current_state()) {
+        case drive::DriveState::DRIVE_DISABLE:
+          led::set_hsv(20.0f, 1.0f, sin(led_timer_s) * v_scale + v_scale + 0.1);
+          break;
+        case drive::DriveState::DRIVE_CALIBRATE:
+          led::set_hsv(290.0f, 1.0f, sin(led_timer_s * 4.0f) * v_scale + v_scale + 0.1);
+          break;
+        case drive::DriveState::DRIVE_IDLE:
+          led::set_hsv(230.0f, 1.0f, sin(led_timer_s * 4.0f) * v_scale + v_scale + 0.1);
+          break;
+        case drive::DriveState::DRIVE_ERROR:
+          led::set_hsv(0.0f, 1.0f, sin(led_timer_s * 4.0f) * v_scale + v_scale + 0.1);
+          break;
+        default:
+          led::set_hsv(led_timer_s * 4.0f, 1.0f, 1.0f);
+      }
+
+      // Reset after an hour
+      if(led_timer_s > 3600.0f){
+        led_timer_s = 0;
+      }
     }
   }
 }
 
 void tim_elapsed_callback(TIM_HandleTypeDef *htim) {
   if(htim->Instance == TIM6) {
+    encoder.update_state();
+    analog::update_current_sense();
     drive::commutation_interrupt();
   }
 }
+
+
+#define CDC_RX_BUFFER_SIZE 128
+uint8_t cdcRxBuffer[CDC_RX_BUFFER_SIZE];
+uint32_t cdcRxBufferIndex = 0;
 
 void usb_callback(uint8_t *Buf, uint32_t Len){
   for (int i = 0; i < Len; i++) {

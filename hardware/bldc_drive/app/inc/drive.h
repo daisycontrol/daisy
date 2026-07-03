@@ -1,8 +1,6 @@
 #pragma once
-#include "stm32g4xx_hal.h"
-#include "tim.h"
-
-#include "analog.h"
+#include "common/tle5012/tle5012.h"
+#include "drive_memory.h"
 
 #define PHASE_DUTY_MAX 1024.0f
 #define MAX_VOLTAGE 2.0f
@@ -11,6 +9,8 @@ namespace drive
 {
 
 void initialize();
+void assign_drive_memory(struct DriveMemory* drive_memory);
+void assign_encoder(tle5012b::TLE5012B*);
 void enable();
 void enable_low_side();
 void disable();
@@ -20,6 +20,8 @@ void apply_phaseA_duty(uint16_t);
 void apply_phaseB_duty(uint16_t);
 void apply_phaseC_duty(uint16_t);
 void apply_phase_duties(uint16_t, uint16_t, uint16_t);
+
+extern const float min_voltage;
 
 enum InitState {
     INIT_INIT,

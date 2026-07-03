@@ -12,11 +12,13 @@ using namespace foc;
  * @param offset 
  * @return uint16_t 
  */
+
+#define ENCODER_COUNTS 65536
+#define ANGLE_COUNTS 1024
 int foc::convert_to_electrical_angle(int encoder_raw, int8_t ratio, uint16_t offset){
     // TODO: This is messy and not intuitive; does it really give a performance increase over just using floats
-    int32_t temp = (encoder_raw % 16384) % (16384 / ratio);
-    temp = temp * (ratio * 65536);
-    temp = temp / 16384;
+    int32_t temp = (encoder_raw) % (ENCODER_COUNTS / ratio);
+    temp = temp * ANGLE_COUNTS / ENCODER_COUNTS;
     return (temp - offset);
 }
 

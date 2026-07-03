@@ -12,18 +12,6 @@ fields = [
 ]
 
 [[message]]
-name = "CANFDTest"
-fields = [
-    {name = "value_1", type = "i16"},
-    {name = "value_2", type = "i16"},
-    {name = "value_3", type = "i16"},
-    {name = "value_4", type = "i16"},
-    {name = "value_5", type = "i16"},
-    {name = "value_6", type = "i16"},
-    {name = "value_7", type = "i32"},
-]
-
-[[message]]
 name = "EmptyMessage"
 fields = [
     {name = "empty", type = "i8"}

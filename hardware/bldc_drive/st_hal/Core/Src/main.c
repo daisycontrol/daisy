@@ -69,6 +69,7 @@ void SystemClock_Config(void);
   * @retval int
   */
 int main(void)
+
 {
 
   /* USER CODE BEGIN 1 */
@@ -185,7 +186,7 @@ void SystemClock_Config(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
-
+  tim_elapsed_callback(htim);
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM17)
   {
