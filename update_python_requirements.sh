@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-bazel run //python:requirements.update
+PIP_CONSTRAINT=$(pwd)/build-constraints.txt bazel run //python:requirements.update
 
 cd "$(dirname "$0")"
 
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r python/requirements_lock.txt
+PIP_CONSTRAINT=$(pwd)/build-constraints.txt pip install -r python/requirements_lock.txt

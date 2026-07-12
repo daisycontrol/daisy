@@ -12,12 +12,13 @@ py_wheel(
     distribution = "daisycontrol",
     version = "0.0.1",
     python_tag = "py3",
-    deps = [":daisycontrol_lib"]
+    deps = [":daisycontrol_lib"],
+    # packages = ["daisycontrol", "daisycontrol.bldc_drive"]
 )
 
 py_binary(
-    name = "message_test",
-    srcs = ["message_test.py"],
+    name = "calibrate",
+    srcs = ["calibrate.py"],
     deps = [
         "//schema:common_messages_py",
         "//hardware/bldc_drive:bldc_drive_messages_py",
@@ -25,5 +26,87 @@ py_binary(
         "@pip//python_can",
         "@pip//numpy",
         "@pip//pyserial",
+        "@pip//matplotlib",
+    ]
+)
+
+py_binary(
+    name = "run_test",
+    srcs = ["run_test.py"],
+    deps = [
+        "//schema:common_messages_py",
+        "//hardware/bldc_drive:bldc_drive_messages_py",
+        ":daisycontrol_lib",
+        "@pip//python_can",
+        "@pip//numpy",
+        "@pip//pyserial",
+        "@pip//matplotlib",
+    ]
+)
+
+
+py_binary(
+    name = "write_memory",
+    srcs = ["write_memory.py"],
+    deps = [
+        "//schema:common_messages_py",
+        "//hardware/bldc_drive:bldc_drive_messages_py",
+        ":daisycontrol_lib",
+        "@pip//python_can",
+        "@pip//numpy",
+        "@pip//pyserial",
+    ]
+)
+
+py_binary(
+    name = "read_memory",
+    srcs = ["read_memory.py"],
+    deps = [
+        "//schema:common_messages_py",
+        "//hardware/bldc_drive:bldc_drive_messages_py",
+        ":daisycontrol_lib",
+        "@pip//python_can",
+        "@pip//numpy",
+        "@pip//pyserial",
+    ]
+)
+
+py_binary(
+    name = "read_encoder",
+    srcs = ["read_encoder.py"],
+    deps = [
+        "//schema:common_messages_py",
+        "//hardware/bldc_drive:bldc_drive_messages_py",
+        ":daisycontrol_lib",
+        "@pip//python_can",
+        "@pip//numpy",
+        "@pip//pyserial",
+    ]
+)
+
+py_binary(
+    name = "run_handle",
+    srcs = ["run_handle.py"],
+    deps = [
+        "//schema:common_messages_py",
+        "//hardware/bldc_drive:bldc_drive_messages_py",
+        ":daisycontrol_lib",
+        "@pip//python_can",
+        "@pip//numpy",
+        "@pip//pyserial",
+        "@pip//ruckig",
+    ]
+)
+
+py_binary(
+    name = "ruckig_test",
+    srcs = ["ruckig_test.py"],
+    deps = [
+        "//schema:common_messages_py",
+        "//hardware/bldc_drive:bldc_drive_messages_py",
+        ":daisycontrol_lib",
+        "@pip//python_can",
+        "@pip//numpy",
+        "@pip//ruckig",
     ]
 )

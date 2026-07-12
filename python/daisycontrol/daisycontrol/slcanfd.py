@@ -10,6 +10,8 @@ from can.exceptions import (
     error_check
 )
 
+from serial.tools import list_ports
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,6 +33,22 @@ dlc_codes = [
     48,
     64
 ]
+
+def make_bus(port_description):
+    """ Finds attached 50x50-Drive and opens it as a SLCAN interface """
+    COM_PORT = None
+    for port in list_ports.comports():
+        if(port.description == port_description):
+            COM_PORT = port.device
+
+    if(COM_PORT == None):
+        raise Exception("No interface found")
+
+    bus = slcanfdBus(channel=COM_PORT)
+    # bus.set_bitrate(500_000)
+
+    return bus
+
 
 def data_length_to_dlc_code(data_length):
     for dlc in range(len(dlc_codes)):
@@ -103,7 +121,6 @@ class slcanfdBus(BusABC):
 
     # Write string to serial interface
     def _write(self, string: str) -> None:
-        # print(string)
         with error_check("Could not write to serial device"):
             self.serialPortOrig.write(string.encode() + self.LINE_TERMINATOR)
             self.serialPortOrig.flush()

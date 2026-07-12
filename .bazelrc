@@ -7,4 +7,9 @@ build:debug --copt=-Og
 build:debug --copt=-g3
 build:debug --copt=-ggdb
 
+build:optimize --config=stm32g4
+build:optimize --compilation_mode=opt
+build:optimize --copt=-O3
+build:optimize --copt=-ffast-math
+
 common --incompatible_autoload_externally=-@rules_python
