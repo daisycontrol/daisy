@@ -3,6 +3,7 @@
 // c lib includes
 #include "main.h"
 #include "stm32g4xx_hal_def.h"
+#include "stm32g4xx_hal_fdcan.h"
 #include "stm32g4xx_hal_flash.h"
 #include "stm32g4xx_hal_flash_ex.h"
 #include "stm32g4xx_hal_gpio.h"
@@ -25,6 +26,7 @@
 #include "uid_hash.h"
 #include "comms.h"
 #include "drive_memory.h"
+#include "foc.h"
 // Common lib includes
 #include "common/tle5012/tle5012.h"
 #include "common/scheduler/scheduler.h"
@@ -51,26 +53,65 @@ void state_change(StateChange requested_state){
 }
 
 // Read out volatile memory
-void read_memory(EmptyMessage msg){
+void read_memory(EmptyMessage msg) {
   router.send(READ_MEMORY_ID, DriveMemory::encode(drive_memory));
 }
 
 // Write new memory
-void write_memory(DriveMemory _new_memory){
+void write_memory(DriveMemory _new_memory) {
   drive_memory = _new_memory;
   memory::write_memory(&drive_memory);
   router.send(READ_MEMORY_ID, DriveMemory::encode(drive_memory));
 }
 
+void set_controller_settings(ControllerSettings controller_settings){
+  drive::set_controller_settings(controller_settings);
+  router.send(CONTROLLER_SETTINGS_ID, EmptyMessage::encode(EmptyMessage({1})));
+}
+
+void set_controller_setpoint(ControllerSetpoint controller_setpoint){
+  drive::set_controller_setpoint(controller_setpoint);
+
+  ControllerFeedback feedback;
+  feedback.position_rads = encoder.angle_rads;
+  feedback.velocity_radsps = encoder.speed_radsps;
+  feedback.torque_Nm = drive::get_Q_current();
+  feedback.motor_temp_C = analog::get_motor_temp();
+
+  router.send(CONTROLLER_SETPOINT_ID, ControllerFeedback::encode(feedback));
+}
+
 // Read raw encoder values
-void read_encoder(EmptyMessage msg){
+void read_encoder(EmptyMessage msg) {
   EncoderState encoder_state;
 
+  encoder_state.angle_rads = encoder.angle_rads;
   encoder_state.angle_raw = encoder.angle_raw;
   encoder_state.speed_raw = encoder.speed_raw;
   encoder_state.revolutions = encoder.revolutions;
 
   router.send(ENCODER_STATE_ID, EncoderState::encode(encoder_state));
+}
+
+void read_foc_info(EmptyMessage msg) {
+  drive::PhaseVoltages phase_voltages = drive::get_target_phase_voltages();
+  drive::PhaseCurrents phase_currents = drive::get_phase_currents();
+  drive::MotorCurrents motor_currents = drive::get_motor_currents();
+
+
+  FOCInfo foc_info;
+  foc_info.phaseA_V = phase_voltages.phaseA_V;
+  foc_info.phaseB_V = phase_voltages.phaseB_V;
+  foc_info.phaseC_V = phase_voltages.phaseC_V;
+
+  foc_info.phaseA_mA = phase_currents.phaseA_mA;
+  foc_info.phaseB_mA = phase_currents.phaseB_mA;
+  foc_info.phaseC_mA = phase_currents.phaseC_mA;
+
+  foc_info.Q_mA = motor_currents.Q_mA;
+  foc_info.D_mA = motor_currents.D_mA;
+
+  router.send(7, FOCInfo::encode(foc_info));
 }
 
 void app_main(void){
@@ -80,12 +121,19 @@ void app_main(void){
   // Register IPC callbacks 
   router.register_hook<StateChange>(STATE_CHANGE_ID, "state_change", state_change);
   router.register_hook<EmptyMessage>(ENCODER_STATE_ID, "read_encoder", read_encoder);
+
+  router.register_hook<ControllerSettings>(CONTROLLER_SETTINGS_ID, "controller_settings", set_controller_settings);
+  router.register_hook<ControllerSetpoint>(CONTROLLER_SETPOINT_ID, "controller_setpoint", set_controller_setpoint);
+
   router.register_hook<EmptyMessage>(READ_MEMORY_ID, "read_memory", read_memory);
   router.register_hook<DriveMemory>(WRITE_MEMORY_ID, "write_memroy", write_memory);
   
   // Initialize modules
   memory::initialize(sizeof(DriveMemory), 63);
   drive_memory = *(DriveMemory*)(memory::get_addr()); // Load memory
+  if(drive_memory.magic != 0x1234){ // If no memory, load some default values
+    drive_memory.can_id = 1; // Default to ID 1
+  }
   scheduler::initialize();
   uid_hash::initialize();
   trig::initialize();
@@ -107,10 +155,10 @@ void app_main(void){
   blink_task.period_us = scheduler::period_from_hertz(60);
 
   scheduler::PeriodicTask drive_state_machine(&htim2);
-  drive_state_machine.period_us = scheduler::period_from_hertz(1000);
+  drive_state_machine.period_us = scheduler::period_from_hertz(100);
 
   scheduler::PeriodicTask analog_update_task(&htim2);
-  analog_update_task.period_us = scheduler::period_from_hertz(100);
+  analog_update_task.period_us = scheduler::period_from_hertz(50);
 
 
   char print_buffer[100];
@@ -125,6 +173,7 @@ void app_main(void){
     
     // Compute all non-current analog values
     if(analog_update_task.tick()){
+      // encoder.update_state();
       analog::read_bus_voltage_v();
     }
 
@@ -145,6 +194,9 @@ void app_main(void){
         case drive::DriveState::DRIVE_IDLE:
           led::set_hsv(230.0f, 1.0f, sin(led_timer_s * 4.0f) * v_scale + v_scale + 0.1);
           break;
+        case drive::DriveState::DRIVE_IMPEDANCE_CONTROL:
+          led::set_hsv(led_timer_s * 50.0f, 1.0f, 1.0f);
+          break;
         case drive::DriveState::DRIVE_ERROR:
           led::set_hsv(0.0f, 1.0f, sin(led_timer_s * 4.0f) * v_scale + v_scale + 0.1);
           break;
@@ -157,12 +209,17 @@ void app_main(void){
         led_timer_s = 0;
       }
     }
+
+    // If we have pending can messages
+    if(HAL_FDCAN_GetRxFifoFillLevel(&hfdcan1, FDCAN_RX_FIFO0) > 0){
+      comms::handle_can_rx(&hfdcan1);
+    }
   }
 }
 
 void tim_elapsed_callback(TIM_HandleTypeDef *htim) {
   if(htim->Instance == TIM6) {
-    encoder.update_state();
+    encoder.update_state(10000);
     analog::update_current_sense();
     drive::commutation_interrupt();
   }

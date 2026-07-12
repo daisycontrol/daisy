@@ -2,20 +2,21 @@
 #include "common/ipc/ipc.h"
 #include "stm32g4xx_hal_fdcan.h"
 #include <cstddef>
+#include "drive_memory.h"
 
 using namespace comms;
 
 // Preallocate headers and data buffers
-FDCAN_TxHeaderTypeDef TxHeader;
+volatile FDCAN_TxHeaderTypeDef TxHeader;
 FDCAN_RxHeaderTypeDef RxHeader;
-uint8_t TxData[64];
+// uint8_t TxData[64];
 uint8_t RxData[64];
 
 FDCAN_TxHeaderTypeDef TxHeader_slcan;
 
 ipc::IPCRouter* ipc_router;
 
-uint8_t TxData_slcan[64];
+volatile uint8_t TxData_slcan[64];
 
 bool slcan_open = false;
 
@@ -67,29 +68,16 @@ uint8_t data_length_to_dlc(size_t len){
 // CAN handle to use
 FDCAN_HandleTypeDef* hfdcan;
 
-// Device ID, also used as CAN ID
-uint16_t device_id = 10;
-
-void comms::set_device_id(uint16_t _device_id){
-    device_id = _device_id;
-}
-
-uint16_t comms::get_device_id(){
-    return device_id;
-}
-
 int comms::transmit(const uint8_t* data, size_t len)
 {
-    FDCAN_TxHeaderTypeDef tx_header;
+    TxHeader.Identifier = drive_memory.can_id;
+    TxHeader.IdType = FDCAN_STANDARD_ID;
+    TxHeader.TxFrameType = FDCAN_DATA_FRAME;
+    TxHeader.DataLength = data_length_to_dlc(len);
+    TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
+    TxHeader.FDFormat = FDCAN_FD_CAN;
 
-    tx_header.Identifier = device_id;
-    tx_header.IdType = FDCAN_STANDARD_ID;
-    tx_header.TxFrameType = FDCAN_DATA_FRAME;
-    tx_header.DataLength = data_length_to_dlc(len);
-    tx_header.BitRateSwitch = FDCAN_BRS_OFF;
-    tx_header.FDFormat = FDCAN_FD_CAN;
-
-    return can_transmit(&tx_header, data);
+    return can_transmit(const_cast<FDCAN_TxHeaderTypeDef*>(&TxHeader), data);
 }
 
 int comms::can_transmit(FDCAN_TxHeaderTypeDef* TxHeader, const uint8_t* TxData)
@@ -111,7 +99,8 @@ int comms::can_transmit(FDCAN_TxHeaderTypeDef* TxHeader, const uint8_t* TxData)
 void comms::can_receive(FDCAN_RxHeaderTypeDef *RxHeader, uint8_t *RxData)
 {
     // Route message to ipc callback
-    if(RxHeader->Identifier == device_id){
+    // 2000 is the generic address; all devices respond
+    if(RxHeader->Identifier == drive_memory.can_id || RxHeader->Identifier == 2000){
         ipc_router->on_can_frame(RxData, static_cast<size_t>(dlc_to_data_length[RxHeader->DataLength]));
     }
 }
@@ -121,17 +110,7 @@ void comms::initialize(FDCAN_HandleTypeDef* _hfdcan, ipc::IPCRouter* _router)
     hfdcan = _hfdcan;
     ipc_router = _router;
 
-    // Set up CAN header
-    TxHeader.Identifier = device_id;
-    TxHeader.IdType = FDCAN_STANDARD_ID;
-    TxHeader.TxFrameType = FDCAN_DATA_FRAME;
-    TxHeader.DataLength = FDCAN_DLC_BYTES_8;
-    TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
-    TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-    TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-    TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
-
-    // TODO: Filter doesn't seem to be working yet
+    // // TODO: Filter doesn't seem to be working yet
     FDCAN_FilterTypeDef sFilterConfig;
 
     sFilterConfig.IdType = FDCAN_STANDARD_ID;
@@ -139,7 +118,7 @@ void comms::initialize(FDCAN_HandleTypeDef* _hfdcan, ipc::IPCRouter* _router)
     sFilterConfig.FilterType = FDCAN_FILTER_RANGE;
     sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
     sFilterConfig.FilterID1 = 0x00;
-    sFilterConfig.FilterID2 = 0x01;
+    sFilterConfig.FilterID2 = 0xFF;
 
 
     if (HAL_FDCAN_ConfigFilter(hfdcan, &sFilterConfig) != HAL_OK)
@@ -169,7 +148,7 @@ void comms::initialize(FDCAN_HandleTypeDef* _hfdcan, ipc::IPCRouter* _router)
 void comms::slcan_usb_rx(uint8_t *Buf, uint32_t buffer_length)
 {
     FDCAN_RxHeaderTypeDef RxHeader;
-    uint8_t RxData[64];
+    // uint8_t RxData[64];
 
     /////// Open interface
     if (Buf[0] == 'O')
@@ -253,11 +232,11 @@ void comms::slcan_usb_rx(uint8_t *Buf, uint32_t buffer_length)
         // send_slcan_string(convert_tx_header(&TxHeader_slcan), TxData_slcan);
 
         slcan_open = false;
-        can_transmit(&TxHeader_slcan, TxData_slcan);
+        can_transmit(&TxHeader_slcan, const_cast<uint8_t*>(TxData_slcan));
         slcan_open = true;
 
         RxHeader = convert_tx_header(&TxHeader_slcan);
-        can_receive(&RxHeader, TxData_slcan);
+        can_receive(&RxHeader, const_cast<uint8_t*>(TxData_slcan));
     }
 }
 
@@ -269,31 +248,35 @@ void comms::send_slcan_string(FDCAN_RxHeaderTypeDef RxHeader, const uint8_t *RxD
 
     // Set message type and ID
     // sprintf is valid here as we will override the termination character later
-    if (RxHeader.IdType == FDCAN_STANDARD_ID)
-    {
-        if (RxHeader.RxFrameType == FDCAN_REMOTE_FRAME)
-        {
-            tx_string[0] = 'r';
-        }
-        else if (RxHeader.RxFrameType == FDCAN_DATA_FRAME)
-        {
-            tx_string[0] = 't';
-        }
+    // if (RxHeader.IdType == FDCAN_STANDARD_ID)
+    // {
+    //     if (RxHeader.RxFrameType == FDCAN_REMOTE_FRAME)
+    //     {
+    //         tx_string[0] = 'r';
+    //     }
+    //     else if (RxHeader.RxFrameType == FDCAN_DATA_FRAME)
+    //     {
+    //         tx_string[0] = 't';
+    //     }
 
-        sprintf(tx_string + 1, "%03x", RxHeader.Identifier);
-    }
-    else if (RxHeader.IdType == FDCAN_EXTENDED_ID)
-    {
-        if (RxHeader.RxFrameType == FDCAN_REMOTE_FRAME)
-        {
-            tx_string[0] = 'R';
-        }
-        else if (RxHeader.RxFrameType == FDCAN_DATA_FRAME)
-        {
-            tx_string[0] = 'T';
-        }
-        sprintf(tx_string + 1, "%011x", RxHeader.Identifier);
-    }
+    //     sprintf(tx_string + 1, "%03x", RxHeader.Identifier);
+    // }
+    // else if (RxHeader.IdType == FDCAN_EXTENDED_ID)
+    // {
+    //     if (RxHeader.RxFrameType == FDCAN_REMOTE_FRAME)
+    //     {
+    //         tx_string[0] = 'R';
+    //     }
+    //     else if (RxHeader.RxFrameType == FDCAN_DATA_FRAME)
+    //     {
+    //         tx_string[0] = 'T';
+    //     }
+    //     sprintf(tx_string + 1, "%011x", RxHeader.Identifier);
+    // }
+
+    // Assume we always have a data frame with standard id length.
+    tx_string[0] = 't';
+    sprintf(tx_string + 1, "%03x", RxHeader.Identifier);
 
     // Set DLC
     sprintf(tx_string + 4, "%01x",RxHeader.DataLength);
@@ -322,4 +305,50 @@ FDCAN_RxHeaderTypeDef comms::convert_tx_header(FDCAN_TxHeaderTypeDef *TxHeader){
     RxHeader.RxFrameType = TxHeader->TxFrameType;
 
     return RxHeader;
+}
+
+// FDCAN1 Callback
+void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
+{
+  if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
+  {
+    // /* Retreive Rx messages from RX FIFO0 */
+    // if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK)
+    // {
+    //   /* Reception Error */
+    //   Error_Handler();
+    // }
+
+    // if(slcan_open){
+    //     send_slcan_string(RxHeader, RxData);
+    // }
+
+    // // Handle device RX
+    // can_receive(&RxHeader, RxData);
+
+
+    if (HAL_FDCAN_ActivateNotification(hfdcan, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK)
+    {
+      /* Notification Error */
+      Error_Handler();
+    }
+  }
+}
+
+
+void comms::handle_can_rx(FDCAN_HandleTypeDef *hfdcan){
+    FDCAN_RxHeaderTypeDef RxHeaderRX;
+    /* Retreive Rx messages from RX FIFO0 */
+    if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeaderRX, RxData) != HAL_OK)
+    {
+      /* Reception Error */
+      Error_Handler();
+    }
+
+    if(slcan_open){
+        send_slcan_string(RxHeaderRX, RxData);
+    }
+
+    // Handle device RX
+    can_receive(&RxHeaderRX, RxData);
 }

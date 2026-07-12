@@ -35,6 +35,9 @@ float read_bus_voltage_v();
  */
 float get_cached_bus_voltage_v();
 
+float get_fet_temp();
+float get_motor_temp();
+
 
 /**
  * @brief Calibrate DRV current sense amps

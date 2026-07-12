@@ -15,6 +15,7 @@ int scheduler::period_from_hertz(int hertz){
     return CLOCK_RATE / hertz;
 }
 
+
 bool scheduler::PeriodicTask::tick(){
     if(timer->Instance->CNT - last_run_us > period_us) {
         // TODO: This slips slightly

@@ -13,12 +13,12 @@ using namespace foc;
  * @return uint16_t 
  */
 
-#define ENCODER_COUNTS 65536
+#define ENCODER_COUNTS 32768
 #define ANGLE_COUNTS 1024
-int foc::convert_to_electrical_angle(int encoder_raw, int8_t ratio, uint16_t offset){
+int foc::convert_to_electrical_angle(int encoder_raw, int8_t ratio, int16_t offset){
     // TODO: This is messy and not intuitive; does it really give a performance increase over just using floats
-    int32_t temp = (encoder_raw) % (ENCODER_COUNTS / ratio);
-    temp = temp * ANGLE_COUNTS / ENCODER_COUNTS;
+    int32_t temp = (encoder_raw % ENCODER_COUNTS) % (ENCODER_COUNTS / ratio);
+    temp = temp * ANGLE_COUNTS / (ENCODER_COUNTS / ratio);
     return (temp - offset);
 }
 
@@ -33,6 +33,11 @@ void foc::make_voltage_at_electrical_angle(int16_t voltage_D_mV, int16_t voltage
     phase_voltages->phaseC_V = voltage_C_mV / 1000.0f;
 }
 
+void foc::phase_currents_to_motor(struct drive::PhaseCurrents* currents, int* current_D_mA, int* current_Q_mA, uint16_t electrical_angle){
+    int current_alpha_mA, current_beta_mA;
+    clarke_transform((int)currents->phaseA_mA, (int)currents->phaseB_mA, (int)currents->phaseC_mA, &current_alpha_mA, &current_beta_mA);
+    park_transform(current_alpha_mA, current_beta_mA, electrical_angle, current_D_mA, current_Q_mA);
+}
 
 void foc::clarke_transform(int A, int B, int C, int *alpha, int *beta){
     *alpha = (int) ( SQRT_2_3 * (1 * A  -  B / 2           -  C / 2         ) );
@@ -51,6 +56,6 @@ void foc::inverse_clarke_transform(int alpha, int beta, int *a, int *b, int *c){
 }
 
 void foc::inverse_park_transform(int d, int q, int angle, int *alpha, int *beta){
-    *alpha = trig::mult_cos(angle, d) + trig::mult_sin(angle, q);
-    *beta =  trig::mult_cos(angle, q) - trig::mult_sin(angle, d);
+    *alpha = trig::mult_cos(angle, d) - trig::mult_sin(angle, q);
+    *beta =  trig::mult_sin(angle, d) + trig::mult_cos(angle, q);
 }

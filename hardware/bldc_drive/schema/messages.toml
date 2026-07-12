@@ -1,34 +1,67 @@
 [[message]]
 name = "ControllerSettings"
 fields = [
-    {name = "kP_mNm", type = "u16"},
-    {name = "kD_mNm", type = "u16"},
-    {name = "max_current_mA", type = "u16"}
+    {name = "kP_Nm", type = "f32"},
+    {name = "kD_Nm", type = "f32"},
+    {name = "max_current_mA", type = "u16"},
+    {name = "position_filter", type = "f16", scale = "1000"},
+    {name = "padding", type = "u16"},
+    {name = "padding2", type = "u8"}
 ]
 
 [[message]]
 name = "ControllerSetpoint"
 fields = [
-    {name = "position_target_mRads", type = "i16"},
-    {name = "torque_feedforward_mNm", type = "i16"},
+    {name = "position_target_rads", type = "f32"},
+    {name = "velocity_target_radsps", type = "f32"},
+    {name = "torque_feedforward_Nm", type = "f16", scale = "1000"},
+    {name = "padding", type = "u8"}
 ]
 
 [[message]]
 name = "ControllerFeedback"
 fields = [
-    {name = "position_mRads", type = "i16"},
-    {name = "velocity_mRads", type = "i16"},
-    {name = "torque_mNm", type = "i16"},
-    {name = "drive_temp_C", type = "u8"},
+    {name = "position_rads", type = "f32"}, # 4
+    {name = "velocity_radsps", type = "f32"}, # 8
+    {name = "torque_Nm", type = "f16", scale = "1000"}, # 10
+    {name = "motor_temp_C", type = "u8"}, # 11
+]
+
+[[message]]
+name = "FOCInfo"
+fields = [
+    {name = "phaseA_V", type = "f16", scale = "1000"}, # 2
+    {name = "phaseB_V", type = "f16", scale = "1000"}, # 4
+    {name = "phaseC_V", type = "f16", scale = "1000"}, # 6
+    {name = "Q_mV", type = "i16"}, # 8
+    {name = "D_mV", type = "i16"}, # 10
+    {name = "phaseA_mA", type = "i16"}, # 12
+    {name = "phaseB_mA", type = "i16"}, # 14
+    {name = "phaseC_mA", type = "i16"}, # 16
+    {name = "Q_mA", type = "i16"}, # 18
+    {name = "D_mA", type = "i16"}, # 20
+    {name = "padding", type = "i16"}, # 22
+    {name = "padding2", type = "i8"}
 ]
 
 [[message]]
 name = "EncoderState"
 fields = [
+    {name = "angle_rads", type = "f32"},
     {name = "angle_raw", type = "u16"},
     {name = "speed_raw", type = "i16"},
-    {name = "revolutions", type = "i16"}
+    {name = "revolutions", type = "i16"},
+    {name = "padding", type = "i8"}
 ]
+
+[[message]]
+name = "CalibrationInfo"
+fields = [
+    {name = "angle_raw", type = "u16"},
+    {name = "applied_electrical_angle", type = "i16"},
+    {name = "measured_electrical_angle", type = "i16"}
+]
+
 
 [[message]]
 name = "DriveMemory"
@@ -37,7 +70,7 @@ fields = [
     {name = "can_id", type = "u16"},
     {name = "drive_pole_pairs", type = "i8"}, # Negative pole pairs means a reversed motor
     {name = "reversed", type = "i8"},
-    {name = "drive_encoder_offset", type = "u16"},
+    {name = "drive_encoder_offset", type = "i16"},
     {name = "drive_resistance_mOhm", type = "u16"},
     {name = "drive_inductance_uH", type = "u16"},
     {name = "drive_torque_constant_mNm_A", type = "u16"},

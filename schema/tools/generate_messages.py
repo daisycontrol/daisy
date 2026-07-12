@@ -7,8 +7,10 @@ c_types = {
     'i8':  'int8_t',
     'u16': 'uint16_t',
     'i16': 'int16_t',
+    'f16': 'float',
     'u32': 'uint32_t',
     'i32': 'int32_t',
+    'f32': 'float'
 }
 
 py_types = {
@@ -16,8 +18,10 @@ py_types = {
     'i8':  'int',
     'u16': 'int',
     'i16': 'int',
+    'f16': 'float',
     'u32': 'int',
     'i32': 'int',
+    'f32': 'float'
 }
 
 py_struct_types = {
@@ -25,8 +29,10 @@ py_struct_types = {
     'i8':  'b',
     'u16': 'H',
     'i16': 'h',
+    'f16': 'h',
     'u32': 'I',
     'i32': 'i',
+    'f32': 'f'
 }
 
 type_lengths = {
@@ -34,8 +40,10 @@ type_lengths = {
     'i8':  1,
     'u16': 2,
     'i16': 2,
+    'f16': 2,
     'u32': 4,
     'i32': 4,
+    'f32': 4
 }
 
 max_can_message_length = 64
@@ -53,7 +61,10 @@ def write_message_c(message, gen: CodeGen):
         with Indent(gen, "{", "}"):
             gen.add_line("std::vector<uint8_t> buf;")
             for field in message["fields"]:
-                gen.add_line(f'ipc::put_{field["type"]}(buf, f.{field["name"]});') 
+                if(field["type"] == 'f16'):
+                    gen.add_line(f'ipc::put_i16(buf, f.{field["name"]} * {field["scale"]});')
+                else:
+                    gen.add_line(f'ipc::put_{field["type"]}(buf, f.{field["name"]});')
 
             gen.add_line("return buf;")
 
@@ -63,7 +74,10 @@ def write_message_c(message, gen: CodeGen):
             gen.add_line(f'{message["name"]} frame{{}};')
 
             for field in message["fields"]:
-                gen.add_line(f'frame.{field["name"]} = r.{field["type"]}();') 
+                if(field["type"] == 'f16'):
+                    gen.add_line(f'frame.{field["name"]} = r.i16() / {field["scale"]}.0f;') 
+                else:
+                    gen.add_line(f'frame.{field["name"]} = r.{field["type"]}();') 
 
             gen.add_line("return frame;")
     return gen
@@ -82,7 +96,14 @@ def write_message_py(message, gen : CodeGen):
         gen.add_line(f'def decode(cls, data: bytes) -> "{message["name"]}":')
         with Indent(gen):
             gen.add_line(f'{ ",".join([ f["name"] for f in message["fields"] ]) } = struct.unpack(cls._FMT, data[: struct.calcsize(cls._FMT)])')
-            gen.add_line(f'return cls({ ",".join([ f["name"] for f in message["fields"] ]) })')
+
+            output_fields = []
+            for field in message["fields"]:
+                if(field['type'] == 'f16'):
+                    output_fields.append(f"int({field['name']} / {field['scale']})")
+                else:
+                    output_fields.append(field['name'])
+            gen.add_line(f'return cls({ ",".join(output_fields) })')
         
         gen.add_line("")
         gen.add_line("@staticmethod")
@@ -90,7 +111,11 @@ def write_message_py(message, gen : CodeGen):
         with Indent(gen):
             gen.add_line(f'return struct.pack({message["name"]}._FMT, ')
             with Indent(gen):
-                [ gen.add_line(f'obj.{f["name"]},') for f in message["fields"] ]
+                for field in message["fields"]:
+                    if(field['type'] == 'f16'):
+                        gen.add_line(f"int(obj.{field['name']} * {field['scale']}),")
+                    else:
+                        gen.add_line(f'obj.{field["name"]},')
                 gen.add_line(")")
 
 def validate_message(message):
@@ -139,6 +164,8 @@ if __name__ == "__main__":
         for message in message_structure['message']:
             validate_message(message)
             write_message_c(message, gen_c)
+
+        print(args.out)
 
         with open(args.out, "w") as f:
             f.write(gen_c.file_string)

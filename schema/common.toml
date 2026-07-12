@@ -12,7 +12,14 @@ fields = [
 ]
 
 [[message]]
+name = "FloatTest"
+fields = [
+    {name = "float_value", type = "f16", scale = "1000"},
+    {name = "float_value_b", type = "f16", scale = "2000"}
+]
+
+[[message]]
 name = "EmptyMessage"
 fields = [
-    {name = "empty", type = "i8"}
+    {name = "empty", type = "u8"}
 ]

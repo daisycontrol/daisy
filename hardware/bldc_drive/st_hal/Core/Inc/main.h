@@ -73,12 +73,14 @@ void Error_Handler(void);
 #define LED_B_GPIO_Port GPIOA
 #define IFA_Pin GPIO_PIN_1
 #define IFA_GPIO_Port GPIOB
-#define IFA_EXTI_IRQn EXTI1_IRQn
 #define IFB_Pin GPIO_PIN_2
 #define IFB_GPIO_Port GPIOB
-#define IFB_EXTI_IRQn EXTI2_IRQn
 #define ENC_CS_Pin GPIO_PIN_10
 #define ENC_CS_GPIO_Port GPIOB
+#define THERM_FET_Pin GPIO_PIN_11
+#define THERM_FET_GPIO_Port GPIOB
+#define THERM_MOT_Pin GPIO_PIN_12
+#define THERM_MOT_GPIO_Port GPIOB
 #define DRV_NFAULT_Pin GPIO_PIN_13
 #define DRV_NFAULT_GPIO_Port GPIOB
 #define DRV_EN_Pin GPIO_PIN_14

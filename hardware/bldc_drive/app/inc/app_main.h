@@ -2,9 +2,13 @@
 #include "tim.h"
 
 #define STATE_CHANGE_ID 1
-#define ENCODER_STATE_ID 5
-#define READ_MEMORY_ID 10
-#define WRITE_MEMORY_ID 11
+
+#define CONTROLLER_SETTINGS_ID 10
+#define CONTROLLER_SETPOINT_ID 11
+#define ENCODER_STATE_ID 12
+
+#define READ_MEMORY_ID 100
+#define WRITE_MEMORY_ID 101
 
 #ifdef __cplusplus
 extern "C" {

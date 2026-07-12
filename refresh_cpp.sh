@@ -1,0 +1,1 @@
+bazel run @hedron_compile_commands//:refresh_all --incompatible_autoload_externally=-@rules_python

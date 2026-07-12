@@ -69,7 +69,6 @@ void SystemClock_Config(void);
   * @retval int
   */
 int main(void)
-
 {
 
   /* USER CODE BEGIN 1 */
@@ -102,7 +101,6 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM15_Init();
   MX_TIM6_Init();
-  MX_TIM7_Init();
   MX_FDCAN1_Init();
   MX_RTC_Init();
   MX_TIM2_Init();

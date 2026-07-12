@@ -6,6 +6,7 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
+#include "cstring"
 
 namespace ipc{
 
@@ -43,6 +44,12 @@ inline void put_i32(std::vector<std::uint8_t>&buf, int32_t v){
     buf.push_back(static_cast<uint8_t>((v >> 24) & 0xFF));
 }
 
+inline void put_f32(std::vector<uint8_t>& buf, float f) {
+    uint32_t bits;
+    std::memcpy(&bits, &f, sizeof(bits));
+    put_u32(buf, bits);
+}
+
 
 struct Reader {
     const uint8_t* data;
@@ -62,14 +69,20 @@ struct Reader {
         return v;
     }
     uint32_t u32() { 
-        uint16_t v = static_cast<uint32_t>(data[pos] | data[pos + 1] << 8 | data[pos + 1] << 16 | data[pos + 1] << 24);
+        uint32_t v = static_cast<uint32_t>(data[pos] | data[pos + 1] << 8 | data[pos + 2] << 16 | data[pos + 3] << 24);
         pos += 4;
         return v;
     }
     int32_t i32() { 
-        int16_t v = static_cast<int32_t>(data[pos] | data[pos + 1] << 8 | data[pos + 1] << 16 | data[pos + 1] << 24);
+        int32_t v = static_cast<int32_t>(data[pos] | data[pos + 1] << 8 | data[pos + 2] << 16 | data[pos + 3] << 24);
         pos += 4;
         return v;
+    }
+    float f32() {
+        uint32_t bits = u32();
+        float f;
+        memcpy(&f, &bits, sizeof(f));
+        return f;
     }
 };
 
@@ -129,11 +142,12 @@ class IPCRouter{
         dispatch(ipc_id, frame + 1, frame_len - 1);
     }
 
-    void send(uint8_t ipc_id, const std::vector<uint8_t>& payload){
-        std::vector<uint8_t> frame;
-        frame.push_back(ipc_id);
-        frame.insert(frame.end(), payload.begin(), payload.end());
-        tx_fn_(frame.data(), frame.size());
+    __attribute__((noinline))
+    void send(uint8_t ipc_id, const std::vector<uint8_t>& payload) {
+        uint8_t frame[65];
+        frame[0] = ipc_id;
+        memcpy(frame + 1, payload.data(), payload.size());
+        tx_fn_(frame, payload.size() + 1);
     }
 
 private:

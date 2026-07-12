@@ -3,7 +3,7 @@
 #include "drive_memory.h"
 
 #define PHASE_DUTY_MAX 1024.0f
-#define MAX_VOLTAGE 2.0f
+#define MAX_VOLTAGE 6.0f
 
 namespace drive
 {
@@ -56,11 +56,16 @@ struct PhaseVoltages {
     float phaseC_V;
 };
 
-struct PhaseVoltages_mV16 {
-    int16_t phaseA_mV;
-    int16_t phaseB_mV;
-    int16_t phaseC_mV;
+struct MotorVoltages {
+    float Q_V;
+    float D_V;
 };
+
+// struct PhaseVoltages_mV16 {
+//     int16_t phaseA_mV;
+//     int16_t phaseB_mV;
+//     int16_t phaseC_mV;
+// };
 
 struct PhaseCurrents {
     float phaseA_mA;
@@ -68,21 +73,33 @@ struct PhaseCurrents {
     float phaseC_mA;
 };
 
-struct PhaseCurrents_mA16 {
-    int16_t phaseA_mA;
-    int16_t phaseB_mA;
-    int16_t phaseC_mA;
+struct MotorCurrents {
+    float Q_mA;
+    float D_mA;
 };
+
+// struct PhaseCurrents_mA16 {
+//     int16_t phaseA_mA;
+//     int16_t phaseB_mA;
+//     int16_t phaseC_mA;
+// };
 
 
 void set_target_phase_voltages(struct drive::PhaseVoltages* target_voltages);
-void apply_phase_voltages(PhaseVoltages*);
+struct drive::PhaseVoltages get_target_phase_voltages();
+struct drive::PhaseCurrents get_phase_currents();
+struct drive::MotorVoltages get_target_motor_voltages();
+struct drive::MotorCurrents get_motor_currents();
+float get_Q_current();
 
+void apply_phase_voltages(PhaseVoltages*);
 
 void commutation_interrupt();
 void state_machine();
 void set_gains(float, float);
 DriveState request_new_state(DriveState);
 DriveState get_current_state();
+void set_controller_settings(ControllerSettings);
+void set_controller_setpoint(ControllerSetpoint);
 
 } // drive

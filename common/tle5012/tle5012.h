@@ -11,9 +11,13 @@ namespace tle5012b
             GPIO_TypeDef* cs_port;
             uint16_t cs_pin;
 
-            uint16_t angle_raw;
-            int16_t speed_raw;
-            int16_t revolutions;
+            uint16_t angle_raw = 0;
+            int16_t speed_raw = 0;
+            float speed = 0;
+            int16_t revolutions = 0;
+
+            float angle_rads;
+            float speed_radsps;
             
 
             TLE5012B(SPI_HandleTypeDef* _hspi, GPIO_TypeDef* _cs_port, uint16_t _cs_pin) {
@@ -23,7 +27,7 @@ namespace tle5012b
             }
 
             void read_register(uint8_t, uint8_t*, size_t);
-            void update_state();
+            void update_state(uint16_t update_period_hz);
             // uint16_t read_angle();
             // uint16_t read_speed();
             // void update_state();
