@@ -7,7 +7,17 @@ _TOOLCHAIN_URLS = {
         "urls": ["https://developer.arm.com/-/media/Files/downloads/gnu/{}/binrel/arm-gnu-toolchain-{}-darwin-arm64-arm-none-eabi.tar.xz".format(_TOOLCHAIN_VERSION, _TOOLCHAIN_VERSION)],
         "sha256": "1938a84b7105c192e3fb4fa5e893ba25f425f7ddab40515ae608cd40f68669a8",
         "prefix": "arm-gnu-toolchain-{}-darwin-arm64-arm-none-eabi/bin/arm-none-eabi".format(_TOOLCHAIN_VERSION)
-    }
+    },
+    "linux-aarch64": {
+        "urls": ["https://developer.arm.com/-/media/Files/downloads/gnu/{}/binrel/arm-gnu-toolchain-{}-aarch64-arm-none-eabi.tar.xz".format(_TOOLCHAIN_VERSION, _TOOLCHAIN_VERSION)],
+        "sha256": "d061559d814b205ed30c5b7c577c03317ec447ca51cd5a159d26b12a5bbeb20c",
+        "prefix": "arm-gnu-toolchain-{}-aarch64-arm-none-eabi/bin/arm-none-eabi".format(_TOOLCHAIN_VERSION)
+    },
+    "linux-x86_64": {
+        "urls": ["https://developer.arm.com/-/media/Files/downloads/gnu/{}/binrel/arm-gnu-toolchain-{}-x86_64-arm-none-eabi.tar.xz".format(_TOOLCHAIN_VERSION, _TOOLCHAIN_VERSION)],
+        "sha256": "1938a84b7105c192e3fb4fa5e893ba25f425f7ddab40515ae608cd40f68669a8",
+        "prefix": "arm-gnu-toolchain-{}-x86_64-arm-none-eabi/bin/arm-none-eabi".format(_TOOLCHAIN_VERSION)
+    },
 }
 
 def _arm_none_eabi_toolchain_repo_impl(ctx):
@@ -16,6 +26,8 @@ def _arm_none_eabi_toolchain_repo_impl(ctx):
 
     if "mac" in os_name or "darwin" in os_name:
         key = "macos-aarch64" if "aarch64" in arch or "arm" in arch else "macos-x86_64"
+    elif "linux" in os_name:                                          # <-- this branch
+        key = "linux-aarch64" if "aarch64" in arch else "linux-x86_64"
     else:
         fail("OS {} is not supported yet by the toolchain".format(os_name, arch))
 
