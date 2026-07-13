@@ -41,6 +41,7 @@ enum DriveState {
     DRIVE_CALIBRATE,
     DRIVE_IDLE,
     DRIVE_IMPEDANCE_CONTROL,
+    DRIVE_RAW_VOLTAGE_CONTROL,
     DRIVE_ERROR
 };
 
@@ -92,7 +93,7 @@ struct drive::MotorVoltages get_target_motor_voltages();
 struct drive::MotorCurrents get_motor_currents();
 float get_Q_current();
 
-void apply_phase_voltages(PhaseVoltages*);
+void apply_phase_voltages(PhaseVoltages*, float);
 
 void commutation_interrupt();
 void state_machine();

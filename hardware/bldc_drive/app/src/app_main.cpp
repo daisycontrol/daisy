@@ -114,6 +114,15 @@ void read_foc_info(EmptyMessage msg) {
   router.send(7, FOCInfo::encode(foc_info));
 }
 
+void set_raw_voltage(RawVoltage msg){
+  drive::PhaseVoltages phase_voltages;
+  phase_voltages.phaseA_V = msg.phaseA_V;
+  phase_voltages.phaseB_V = msg.phaseB_V;
+  phase_voltages.phaseC_V = msg.phaseC_V;
+
+  drive::set_target_phase_voltages(&phase_voltages);
+}
+
 void app_main(void){
   CDC_RegisterRxCallback(usb_callback);
   HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
@@ -124,6 +133,7 @@ void app_main(void){
 
   router.register_hook<ControllerSettings>(CONTROLLER_SETTINGS_ID, "controller_settings", set_controller_settings);
   router.register_hook<ControllerSetpoint>(CONTROLLER_SETPOINT_ID, "controller_setpoint", set_controller_setpoint);
+  router.register_hook<RawVoltage>(RAW_VOLTAGE_ID, "raw_voltage", set_raw_voltage);
 
   router.register_hook<EmptyMessage>(READ_MEMORY_ID, "read_memory", read_memory);
   router.register_hook<DriveMemory>(WRITE_MEMORY_ID, "write_memroy", write_memory);
@@ -196,6 +206,9 @@ void app_main(void){
           break;
         case drive::DriveState::DRIVE_IMPEDANCE_CONTROL:
           led::set_hsv(led_timer_s * 50.0f, 1.0f, 1.0f);
+          break;
+        case drive::DriveState::DRIVE_RAW_VOLTAGE_CONTROL:
+          led::set_hsv(200.0f, 1.0f,  sin(led_timer_s * 4.0f) * v_scale + v_scale + 0.1);
           break;
         case drive::DriveState::DRIVE_ERROR:
           led::set_hsv(0.0f, 1.0f, sin(led_timer_s * 4.0f) * v_scale + v_scale + 0.1);

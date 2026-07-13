@@ -4,7 +4,7 @@ import numpy as np
 from hardware.bldc_drive.bldc_drive_messages import DriveMemory
 
 bus = slcanfd.make_bus("50x50-Drive")
-drive = bldc_drive.BLDC_Drive(bus, 1)
+drive = bldc_drive.BLDC_Drive(bus, 2000)
 
 old_memory = drive.read_memory()
 print("Old memory", old_memory)

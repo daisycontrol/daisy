@@ -76,3 +76,11 @@ fields = [
     {name = "drive_torque_constant_mNm_A", type = "u16"},
     {name = "padding", type = "u8"}
 ]
+
+[[message]]
+name = "RawVoltage"
+fields = [
+    {name = "phaseA_V", type="f16", scale = "1000"},
+    {name = "phaseB_V", type="f16", scale = "1000"},
+    {name = "phaseC_V", type="f16", scale = "1000"},
+]

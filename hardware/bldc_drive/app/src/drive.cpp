@@ -108,13 +108,13 @@ void drive::apply_phase_duties(uint16_t value_A, uint16_t value_B, uint16_t valu
     TIM1->CCR1 = value_C;
 }
 
-void drive::apply_phase_voltages(struct drive::PhaseVoltages* voltage){
+void drive::apply_phase_voltages(struct drive::PhaseVoltages* voltage, float voltage_limit){
     float voltage_to_duty = PHASE_DUTY_MAX / analog::get_cached_bus_voltage_v();
 
     apply_phase_duties(
-        PHASE_DUTY_MAX / 2.0f + utils::fbound_sym(voltage->phaseA_V, MAX_VOLTAGE) * voltage_to_duty,
-        PHASE_DUTY_MAX / 2.0f + utils::fbound_sym(voltage->phaseB_V, MAX_VOLTAGE) * voltage_to_duty,
-        PHASE_DUTY_MAX / 2.0f + utils::fbound_sym(voltage->phaseC_V, MAX_VOLTAGE) * voltage_to_duty
+        PHASE_DUTY_MAX / 2.0f + utils::fbound_sym(voltage->phaseA_V, voltage_limit) * voltage_to_duty,
+        PHASE_DUTY_MAX / 2.0f + utils::fbound_sym(voltage->phaseB_V, voltage_limit) * voltage_to_duty,
+        PHASE_DUTY_MAX / 2.0f + utils::fbound_sym(voltage->phaseC_V, voltage_limit) * voltage_to_duty
     );
 }
 
@@ -163,9 +163,11 @@ void drive::commutation_interrupt(){
         
         // Apply new phase voltages
         foc::make_voltage_at_electrical_angle(motor_voltages.D_V, motor_voltages.Q_V, electrical_angle, &phase_voltages);        
-        drive::apply_phase_voltages(&phase_voltages);
+        drive::apply_phase_voltages(&phase_voltages, MAX_VOLTAGE);
     } else if (drive_state == DriveState::DRIVE_CALIBRATE) {
-        drive::apply_phase_voltages(&phase_voltages);
+        drive::apply_phase_voltages(&phase_voltages, MAX_VOLTAGE);
+    } else if (drive_state == DriveState::DRIVE_RAW_VOLTAGE_CONTROL){
+        drive::apply_phase_voltages(&phase_voltages, 24.0);
     } else {
         // Neutral PWM
         drive::apply_phase_duties(0, 0, 0);
@@ -213,6 +215,11 @@ DriveState drive::request_new_state(DriveState new_state){
         }
     }
 
+    // No init needed
+    if(new_state == DriveState::DRIVE_RAW_VOLTAGE_CONTROL && drive_state == DRIVE_DISABLE) {
+        drive_state = DriveState::DRIVE_RAW_VOLTAGE_CONTROL;
+    }
+
     if(new_state == DriveState::DRIVE_ERROR) {
         drive_state = DriveState::DRIVE_ERROR;
     }
@@ -222,7 +229,7 @@ DriveState drive::request_new_state(DriveState new_state){
 
 float calibration_target_angle = 0;
 const float calibration_speed = 1.0f;
-const int calibration_electrical_rotations = 4;
+const int calibration_electrical_rotations = 2;
 const int calibration_voltage_mV = 750;
 uint16_t measured_electrical_angle = 0;
 int average_electrical_angle_offset = 0;

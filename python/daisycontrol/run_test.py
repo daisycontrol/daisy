@@ -10,7 +10,7 @@ drive_1 = bldc_drive.BLDC_Drive(bus, 2000)
 
 print(drive_1.read_memory())
 time.sleep(0.1)
-print(drive_1.set_controller_settings(0.0, 500.0, 2.0, 0.99))
+print(drive_1.set_controller_settings(1000.0, 400.0, 3.0, 0.99))
 time.sleep(0.1)
 print(drive_1.request_state_change(bldc_drive.states.DriveState.DRIVE_INIT.value))
 time.sleep(0.1)
@@ -23,10 +23,9 @@ t = 0
 while(True):
     t += 0.01
     send_time = time.time()
-    state = drive_1.set_controller_setpoint(0.0, 5.0 * np.sin(t), 0.0)
+    state = drive_1.set_controller_setpoint(0.0, 0.0, 0.0)
+    print(state)
     rx_time = time.time()
-
-    print(send_time - rx_time)
     time.sleep(0.001)
 
     # print(drive.set_controller_setpoint(4.0, 0.0, 0.0))

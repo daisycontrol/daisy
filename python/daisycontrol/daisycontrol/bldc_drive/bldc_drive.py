@@ -3,7 +3,7 @@ from typing import overload
 import can
 
 from schema.common_messages import StateChange, EmptyMessage
-from hardware.bldc_drive.bldc_drive_messages import EncoderState, DriveMemory, ControllerSettings, ControllerSetpoint, ControllerFeedback
+from hardware.bldc_drive.bldc_drive_messages import EncoderState, DriveMemory, ControllerSettings, ControllerSetpoint, ControllerFeedback, RawVoltage
 from daisycontrol import ipc
 
 STATE_CHANGE_ID = 1
@@ -11,6 +11,8 @@ STATE_CHANGE_ID = 1
 CONTROLLER_SETTINGS_ID = 10
 CONTROLLER_SETPOINT_ID = 11
 ENCODER_STATE_ID = 12
+
+RAW_VOLTAGE_ID = 20
 
 READ_MEMORY_ID = 100
 WRITE_MEMORY_ID = 101
@@ -111,7 +113,20 @@ class BLDC_Drive():
     def read_controller_response_async(self, can_frame):
         if(can_frame.arbitration_id == self.can_id and can_frame.data[0] == CONTROLLER_SETPOINT_ID):
             self.state = ControllerFeedback.decode(can_frame.data[1:])
-        
+    
+    def set_raw_voltage(self, phaseA_V, phaseB_V, phaseC_V):
+        frame = ipc.make_ipc_frame(
+            self.can_id,
+            RAW_VOLTAGE_ID,
+            RawVoltage(
+                phaseA_V,
+                phaseB_V,
+                phaseC_V
+            )
+        )
+
+        self.bus.send(frame)
+
 
     def read_encoder_state(self):
         frame = ipc.make_ipc_frame(
@@ -124,6 +139,15 @@ class BLDC_Drive():
 
         response = self.bus.recv()
         return EncoderState.decode(response.data[1:])
+    
+    def update_state(self):
+        encoder_state = self.read_encoder_state()
+        self.state = ControllerFeedback(
+            position_rads = encoder_state.angle_rads,
+            velocity_radsps = 0.0,
+            torque_Nm = 0,
+            motor_temp_C = 0,
+        )
 
     def read_memory(self):
         frame = ipc.make_ipc_frame(

@@ -8,4 +8,5 @@ class DriveState(Enum):
     DRIVE_CALIBRATE = 2
     DRIVE_IDLE = 3
     DRIVE_IMPEDANCE_CONTROL = 4
-    DRIVE_ERROR = 5
+    DRIVE_RAW_VOLTAGE = 5
+    DRIVE_ERROR = 6

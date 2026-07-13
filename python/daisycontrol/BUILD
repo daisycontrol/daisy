@@ -99,14 +99,15 @@ py_binary(
 )
 
 py_binary(
-    name = "ruckig_test",
-    srcs = ["ruckig_test.py"],
+    name = "raw_voltage_test",
+    srcs = ["raw_voltage_test.py"],
     deps = [
         "//schema:common_messages_py",
         "//hardware/bldc_drive:bldc_drive_messages_py",
         ":daisycontrol_lib",
         "@pip//python_can",
         "@pip//numpy",
+        "@pip//pyserial",
         "@pip//ruckig",
     ]
 )
