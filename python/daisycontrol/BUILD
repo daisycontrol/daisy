@@ -5,6 +5,7 @@ py_library(
     name = "daisycontrol_lib",
     srcs = glob(["daisycontrol/**/*.py"]),
     imports = ["."],
+    visibility = ["//visibility:public"],
 )
 
 py_wheel(

@@ -1,10 +1,9 @@
 from daisycontrol import slcanfd, bldc_drive
 import time
-import numpy as np
 from hardware.bldc_drive.bldc_drive_messages import DriveMemory
 
-bus = slcanfd.make_bus("50x50-Drive")
-drive = bldc_drive.BLDC_Drive(bus, 2000)
+bus = slcanfd.slcanfdBus("usb-Daisy_50x50-Drive_205634955130-if00")
+drive = bldc_drive.BLDC_Drive(bus, 100)
 
 
 drive.set_raw_voltage(0.0, 0.0, 0.0)
