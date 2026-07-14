@@ -10,10 +10,9 @@ py_binary(
     ]
 )
 
-
 py_library(
     name = "handle_lib",
-    srcs = glob(["remote_joystick.py"]),
+    srcs = glob(["handle_lib/**/*.py"]),
     imports = ["."],
 )
 
@@ -29,5 +28,22 @@ py_binary(
         "@pip//zmq",
         "@pip//python_can",
         "@pip//pyserial",    
+    ]
+)
+
+
+py_binary(
+    name = "arm_test",
+    srcs = ["arm_test.py"],
+    deps = [
+        "//schema:common_messages_py",
+        "//hardware/bldc_drive:bldc_drive_messages_py",
+        "//python/daisycontrol:daisycontrol_lib",
+        ":handle_lib",
+        "@pip//zmq",
+        "@pip//python_can",
+        "@pip//pyserial",
+        "@pip//numpy",
+        "@pip//ruckig",
     ]
 )

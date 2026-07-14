@@ -35,8 +35,20 @@ class RemoteJoystick():
     def Y(self):
         return bool(self.joystick_values[8])
     
-    def Z(self):
+    def X(self):
         return bool(self.joystick_values[9])
+    
+    def left_Y(self):
+        return -self.joystick_values[1]
+    
+    def left_X(self):
+        return self.joystick_values[0]
+    
+    def right_Y(self):
+        return -self.joystick_values[3]
+    
+    def right_X(self):
+        return self.joystick_values[2]
 
     def time_since_last(self):
         return time.monotonic() - self.last_time
