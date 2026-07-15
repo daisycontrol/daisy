@@ -1,6 +1,7 @@
 from handle_lib.arm import Arm
 from handle_lib.suction_gripper import SuctionGripper
-from handle_lib.bus import arm_bus, suction_gripper_bus
+from handle_lib.legs import Legs
+from handle_lib.bus import arm_bus, suction_gripper_bus, legs_bus
 from handle_lib.remote_joystick import RemoteJoystick
 import asyncio
 import time
@@ -10,6 +11,7 @@ from enum import Enum
 DT = 0.001
 arm = Arm(arm_bus, DT)
 gripper = SuctionGripper(suction_gripper_bus)
+legs = Legs(legs_bus, DT)
 
 joystick = RemoteJoystick("Thomass-MacBook-Pro.local", "5556")
 
@@ -22,6 +24,7 @@ async def main():
 
     await arm.enable()
     gripper.enable()
+    await legs.enable()
     
     target_x = 0.3
     target_y = 0.15
@@ -31,16 +34,18 @@ async def main():
 
     while True:
         if(joystick.A()):
-            gripper.set_voltage(24.0)
+            gripper.set_voltage(30.0)
         else:
             gripper.set_voltage(0.0)
 
-        target_x += 0.5 * joystick.left_X() * DT
-        target_y += 0.5 * joystick.left_Y() * DT
-        target_angle += -3.0 * joystick.right_X() * DT
+        target_x -= 0.6 * joystick.left_X() * DT
+        target_y += 0.6 * joystick.left_Y() * DT
+        target_angle += 4.0 * (joystick.left_trigger() - joystick.right_trigger()) * DT
+        # target_angle += -3.0 * joystick.right_X() * DT
 
-        print(target_x, target_y, target_angle)
+        print(gripper.motor)
 
+        legs.set_wheel_velocity_target(-joystick.right_X() * 12.0, -joystick.right_Y() * 6.0)
 
         if(joystick.time_since_last() > 2.0):
             state = State.PAUSE
@@ -51,10 +56,14 @@ async def main():
 
 
         if(state == State.PAUSE):
+            target_x = 0.3
+            target_y = 0.15
+            target_angle = -np.pi/2.0
             arm.set_target_angles(arm.zero_position)
         elif(state == State.RUN):
             arm.set_target_angles(arm.make_ik_target(target_x, target_y, target_angle))
 
+        legs.update()
         await arm.update()
         await asyncio.sleep(DT)
 
@@ -63,6 +72,8 @@ try:
     asyncio.run(main())
 except KeyboardInterrupt:
     asyncio.run(arm.motors.disable_all())
+    asyncio.run(legs.motors.disable_all())
 except Exception as e:
     asyncio.run(arm.motors.disable_all())
+    asyncio.run(legs.motors.disable_all())
     raise e

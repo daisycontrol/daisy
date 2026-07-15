@@ -130,6 +130,7 @@ void app_main(void){
   // Register IPC callbacks 
   router.register_hook<StateChange>(STATE_CHANGE_ID, "state_change", state_change);
   router.register_hook<EmptyMessage>(ENCODER_STATE_ID, "read_encoder", read_encoder);
+  router.register_hook<EmptyMessage>(READ_FOC_INFO_ID, "read_foc_info", read_foc_info);
 
   router.register_hook<ControllerSettings>(CONTROLLER_SETTINGS_ID, "controller_settings", set_controller_settings);
   router.register_hook<ControllerSetpoint>(CONTROLLER_SETPOINT_ID, "controller_setpoint", set_controller_setpoint);

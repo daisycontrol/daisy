@@ -25,9 +25,9 @@ class Arm():
         self.traj_input = InputParameter(3)
         self.traj_output = OutputParameter(3)
 
-        self.traj_input.max_velocity = [5.0, 5.0, 10.0]
-        self.traj_input.max_acceleration = [200.0, 200.0, 300.0]
-        self.traj_input.max_jerk = [400.0, 400.0, 800.0]
+        self.traj_input.max_velocity = [8.0, 8.0, 15.0]
+        self.traj_input.max_acceleration = [80.0, 80.0, 80.0]
+        self.traj_input.max_jerk = [1000.0, 1000.0, 1000.0]
 
         self.max_position = [2.2, 2.8, 2.0]
         self.min_position = [-2.15, -2.8, -2.0]
@@ -37,7 +37,7 @@ class Arm():
 
         self.link_length_m = 0.28
 
-        self.zero_angle = 0.5
+        self.zero_angle = 0.6
 
     async def enable(self):
         await self.motors.init_all()
@@ -70,7 +70,7 @@ class Arm():
         L1 = 0.28
         L2 = 0.08
 
-        target_angle -= 2.0*self.zero_angle
+        target_angle -= 1.0*self.zero_angle
 
         # Calculate offset due to gripper offset
         sub_target_x = target_x - np.sin(-target_angle) * L2

@@ -45,10 +45,17 @@ class RemoteJoystick():
         return self.joystick_values[0]
     
     def right_Y(self):
-        return -self.joystick_values[3]
+        return -self.joystick_values[2]
     
     def right_X(self):
-        return self.joystick_values[2]
+        return self.joystick_values[3]
+    
+    def left_trigger(self):
+        return self.joystick_values[4]
+    
+    def right_trigger(self):
+        return self.joystick_values[5]
+
 
     def time_since_last(self):
         return time.monotonic() - self.last_time
