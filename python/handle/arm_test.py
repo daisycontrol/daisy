@@ -43,7 +43,7 @@ async def main():
         target_angle += 4.0 * (joystick.left_trigger() - joystick.right_trigger()) * DT
         # target_angle += -3.0 * joystick.right_X() * DT
 
-        print(gripper.motor)
+        print(gripper.get_current() > 200)
 
         legs.set_wheel_velocity_target(-joystick.right_X() * 12.0, -joystick.right_Y() * 6.0)
 

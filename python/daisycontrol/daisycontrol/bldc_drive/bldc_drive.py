@@ -3,7 +3,7 @@ from typing import overload
 import can
 
 from schema.common_messages import StateChange, EmptyMessage
-from hardware.bldc_drive.bldc_drive_messages import EncoderState, DriveMemory, ControllerSettings, ControllerSetpoint, ControllerFeedback, RawVoltage
+from hardware.bldc_drive.bldc_drive_messages import EncoderState, DriveMemory, ControllerSettings, ControllerSetpoint, ControllerFeedback, RawVoltage, FOCInfo
 from daisycontrol import ipc
 
 STATE_CHANGE_ID = 1
@@ -11,6 +11,7 @@ STATE_CHANGE_ID = 1
 CONTROLLER_SETTINGS_ID = 10
 CONTROLLER_SETPOINT_ID = 11
 ENCODER_STATE_ID = 12
+FOC_INFO_ID = 13
 
 RAW_VOLTAGE_ID = 20
 
@@ -139,6 +140,19 @@ class BLDC_Drive():
 
         response = self.bus.recv()
         return EncoderState.decode(response.data[1:])
+    
+    def read_foc_state(self):
+        frame = ipc.make_ipc_frame(
+            self.can_id,
+            FOC_INFO_ID,
+            EmptyMessage(0)
+        )
+
+        self.bus.send(frame)
+
+        response = self.bus.recv()
+        return FOCInfo.decode(response.data[1:])
+    
     
     def update_state(self):
         encoder_state = self.read_encoder_state()

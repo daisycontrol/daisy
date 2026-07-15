@@ -12,14 +12,21 @@ joystick = RemoteJoystick("Thomass-MacBook-Pro.local", "5556")
 async def main():
     task = asyncio.create_task(joystick.recv_loop())
 
-    gripper.enable()
+    await gripper.enable()
 
     while(True):
+        gripper_current = gripper.get_current()
+        if(gripper_current > 260.0):
+            print(gripper_current)
+            print("RUMBLE")
+            joystick.set_rumble(0.0, 0.4)
+        else:
+            joystick.set_rumble(0.0, 0.0)
 
         if(joystick.A()):
-            gripper.set_voltage(24.0)
+            gripper.set_voltage(30.0)
         else:
             gripper.set_voltage(0.0)
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.01)
 
 asyncio.run(main())

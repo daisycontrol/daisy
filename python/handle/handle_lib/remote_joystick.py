@@ -14,13 +14,24 @@ class RemoteJoystick():
         self.socket.connect(f"tcp://{self.host}:{self.port}")
         self.socket.setsockopt(zmq.SUBSCRIBE, b"")
 
+        self.pub_socket = self.context.socket(zmq.PUB)
+        self.pub_socket.bind("tcp://*:%s" % 5557)
+
         self.joystick_values = [0] * 21
         self.last_time = 0.0
+
+        self.rumble = [0.0, 0.0]
 
     async def recv_joystick(self):
         msg = await self.socket.recv()
         self.joystick_values = list(struct.unpack("21f", msg))
         self.last_time = time.monotonic()
+
+        self.pub_socket.send(struct.pack("2f", *self.rumble))
+
+    def set_rumble(self, high_value, low_value):
+        self.rumble[0] = high_value
+        self.rumble[1] = low_value
 
     async def recv_loop(self):
         while(True):

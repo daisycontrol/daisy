@@ -39,6 +39,11 @@ async def main():
     task = asyncio.create_task(rumble_recv())
     
 
+    self.context = zmq.asyncio.Context()
+    self.socket = self.context.socket(zmq.SUB)
+    self.socket.connect(f"tcp://{self.host}:{self.port}")
+    self.socket.setsockopt(zmq.SUBSCRIBE, b"")
+
     joysticks = {}
 
     axes_values = [0] * 6
