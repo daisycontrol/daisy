@@ -4,17 +4,26 @@ import struct
 
 pygame.init()
 
+def deadzone(value, deadzone):
+    if(value < deadzone and value > -deadzone):
+        return 0.0
+    return value
+
+
 def main():
     port = "5556"
 
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
-    socket.bind("tcp://localhost:%s" % port)
+    socket.bind("tcp://*:%s" % port)
 
     joysticks = {}
 
     axes_values = [0] * 6
     button_values = [0] * 15
+
+    axes_values[4] = -1.0
+    axes_values[5] = -1.0
 
     clock = pygame.time.Clock()
 
@@ -39,8 +48,10 @@ def main():
             jid = joystick.get_instance_id()
 
             for i in range(len(axes_values)):
-                axes_values[i] = joystick.get_axis(i)
-
+                if(i < 4):
+                    axes_values[i] = deadzone(joystick.get_axis(i), 0.1)
+                else:
+                    axes_values[i] = deadzone((joystick.get_axis(i) + 1.0) / 2.0, 0.1)
             for i in range(len(button_values)):
                 button_values[i] = joystick.get_button(i)
 
