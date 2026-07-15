@@ -1,6 +1,8 @@
 import pygame
 import zmq
+import zmq.asyncio
 import struct
+import asyncio
 
 pygame.init()
 
@@ -10,12 +12,32 @@ def deadzone(value, deadzone):
     return value
 
 
-def main():
-    port = "5556"
 
-    context = zmq.Context()
+rumble = [0.0, 0.0]
+
+async def main():
+    port = "5556"
+    host = "handle.here"
+
+    context = zmq.asyncio.Context()
     socket = context.socket(zmq.PUB)
     socket.bind("tcp://*:%s" % port)
+
+    sub_socket = context.socket(zmq.SUB)
+    sub_socket.connect(f"tcp://{host}:{5557}")
+    sub_socket.setsockopt(zmq.SUBSCRIBE, b"")
+
+    async def rumble_recv():
+        global rumble
+        while(True):
+            msg = await sub_socket.recv()
+            values = list(struct.unpack("2f", msg))
+            rumble[0] = values[0]
+            rumble[1] = values[1]
+            rumble_high = values[0]
+
+    task = asyncio.create_task(rumble_recv())
+    
 
     joysticks = {}
 
@@ -55,14 +77,16 @@ def main():
             for i in range(len(button_values)):
                 button_values[i] = joystick.get_button(i)
 
-            # joystick.rumble(0.0, 0.5, 100)
+
+            print(rumble)
+            joystick.rumble(rumble[0], rumble[1], 100)
 
         joystick_send_data = axes_values + button_values
         socket.send(struct.pack('%sf' % len(joystick_send_data), *joystick_send_data))
-        print(joystick_send_data)
+        # print(joystick_send_data)
 
-        clock.tick(30)
+        await asyncio.sleep(0.05)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
     pygame.quit()

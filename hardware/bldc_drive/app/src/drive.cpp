@@ -167,6 +167,9 @@ void drive::commutation_interrupt(){
     } else if (drive_state == DriveState::DRIVE_CALIBRATE) {
         drive::apply_phase_voltages(&phase_voltages, MAX_VOLTAGE);
     } else if (drive_state == DriveState::DRIVE_RAW_VOLTAGE_CONTROL){
+        phase_curents.phaseA_mA = analog::get_phase_A_current_mA();
+        phase_curents.phaseB_mA = analog::get_phase_B_current_mA();
+        phase_curents.phaseC_mA = analog::get_phase_C_current_mA();
         drive::apply_phase_voltages(&phase_voltages, 24.0);
     } else {
         // Neutral PWM
