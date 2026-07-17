@@ -54,8 +54,24 @@ async def main():
 
     clock = pygame.time.Clock()
 
+    screen = pygame.display.set_mode((500, 500))
+    pygame.display.set_caption("Handle Control")
+
+    font1 = pygame.font.SysFont("Robotto.ttf", 50)
+    text1 = font1.render("hello", True, (255,255,255))
+
+    textrect = text1.get_rect()
+    textrect.center = (250, 250)
+
+
     done = False
     while not done:
+
+        # Draw
+        screen.fill((10,10,10))
+
+        screen.blit(text1, textrect)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 done = True
@@ -69,6 +85,8 @@ async def main():
                 print("Joystick removed")
                 done = True
 
+        print(pygame.key.get_pressed()[pygame.K_a])
+
         joystick_count = pygame.joystick.get_count()
 
         for joystick in joysticks.values():
@@ -76,9 +94,9 @@ async def main():
 
             for i in range(len(axes_values)):
                 if(i < 4):
-                    axes_values[i] = deadzone(joystick.get_axis(i), 0.1)
+                    axes_values[i] = deadzone(joystick.get_axis(i), 0.15)
                 else:
-                    axes_values[i] = deadzone((joystick.get_axis(i) + 1.0) / 2.0, 0.1)
+                    axes_values[i] = deadzone((joystick.get_axis(i) + 1.0) / 2.0, 0.15)
             for i in range(len(button_values)):
                 button_values[i] = joystick.get_button(i)
 
@@ -88,8 +106,9 @@ async def main():
 
         joystick_send_data = axes_values + button_values
         socket.send(struct.pack('%sf' % len(joystick_send_data), *joystick_send_data))
-        # print(joystick_send_data)
+        print(joystick_send_data)
 
+        pygame.display.update()
         await asyncio.sleep(0.05)
 
 if __name__ == "__main__":
