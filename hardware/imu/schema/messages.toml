@@ -1,0 +1,5 @@
+[[message]]
+name = "TestMsg"
+fields = [
+    {name = "angle_raw", type = "u16"},
+]
